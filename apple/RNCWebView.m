@@ -236,8 +236,8 @@ static NSDictionary* customCertificatesForHost;
   if(self.useSharedProcessPool) {
     wkWebViewConfig.processPool = [[RNCWKProcessPoolManager sharedManager] sharedProcessPool];
   }
-    RNCWebViewCustomFileHandler *schemeHandler = [[RNCWebViewCustomFileHandler alloc] init];
-    [wkWebViewConfig setURLSchemeHandler:schemeHandler forURLScheme:@"miniapp-resource"];
+  RNCWebViewCustomFileHandler *schemeHandler = [[RNCWebViewCustomFileHandler alloc] init];
+  [wkWebViewConfig setURLSchemeHandler:schemeHandler forURLScheme:@"miniapp-resource"];
 
   wkWebViewConfig.userContentController = [WKUserContentController new];
 
