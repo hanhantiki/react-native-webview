@@ -48,7 +48,6 @@
       __block __weak EvaluteJavascriptSyncBlock weakEvaluateJavascriptSync = nil;
       EvaluteJavascriptSyncBlock evaluateJavascriptSync = ^ void () {
         [webView evaluateJavaScript:script completionHandler:^(id result, NSError * _Nullable error) {
-          NSLog(@"%@ %@ %d", result, error, result != nil);
           if (error == nil) {
             if (result != nil) {
               resultString = [NSString stringWithFormat:@"%@", result];
