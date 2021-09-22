@@ -44,6 +44,7 @@
       __block BOOL finished = NO;
       
       // recursive execute script in render until get result
+      NSDate * start = [[NSDate alloc] init];
       typedef void (^EvaluteJavascriptSyncBlock)(void);
       __block __weak EvaluteJavascriptSyncBlock weakEvaluateJavascriptSync = nil;
       EvaluteJavascriptSyncBlock evaluateJavascriptSync = ^ void () {
@@ -53,14 +54,22 @@
               resultString = [NSString stringWithFormat:@"%@", result];
               finished = YES;
             } else if (weakEvaluateJavascriptSync) {
-              weakEvaluateJavascriptSync();
+                NSDate * now = [[NSDate alloc] init];
+                if ([now timeIntervalSinceDate:start] > 5) {
+                    //timeout
+                    finished = YES;
+                } else {
+                    weakEvaluateJavascriptSync();
+                }
             }
+          } else {
+            finished = YES;
           }
         }];
       };
       weakEvaluateJavascriptSync = evaluateJavascriptSync;
       evaluateJavascriptSync();
-      
+     
       while (!finished) {
         [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantFuture]];
       }
