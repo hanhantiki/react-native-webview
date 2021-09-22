@@ -843,7 +843,9 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
               if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 view.post(() -> view.evaluateJavascript(script, s -> {
                   if (s != null && s.length() > 0 && !s.equals("null")) {
-                    response[0] = s;
+                    response[0] = s.startsWith("\"") && s.endsWith("\"")
+                      ? s.substring(1, s.length() -1 ).replaceAll("\\\\", "")
+                      : s;
                   }
                   isExecuting[0] = false;
                 }));
