@@ -64,5 +64,5 @@ declare class WebView<P = {}> extends Component<WebViewProps & P> {
 declare class CompositeComponent extends Component<CompositeComponentProps> {
 }
 
-export {WebView};
+export {WebView, CompositeComponent};
 export default WebView;
