@@ -1429,6 +1429,20 @@ static NSDictionary* customCertificatesForHost;
   return request;
 }
 
+- (void)addNativeComponent:(UIView *)view {
+  if (view) {
+    UIView *contentView;
+    for (UIView *view in _webView.scrollView.subviews) {
+      if([[view.class description] hasPrefix:@"WKContentView"])
+        contentView = view;
+    }
+  
+    if (contentView) {
+      [contentView addSubview:view];
+    }
+  }
+}
+
 @end
 
 @implementation RNCWeakScriptMessageDelegate
