@@ -25,7 +25,7 @@ export default class NativeComponent extends Component<Props, State> {
 
   render() {
     return (
-      <View style={{height: 400}}>
+      <View style={{height: 900}}>
         <WebView
           ref={this.webViewRef}
           source={{uri: 'https://tiki.vn'}}
