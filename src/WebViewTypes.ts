@@ -1121,3 +1121,7 @@ export interface WebViewSharedProps extends ViewProps {
    */
   applicationNameForUserAgent?: string;
 }
+
+export interface CompositeComponentProps {
+  webviewTag: number;
+}

@@ -1,4 +1,5 @@
 import WebView from './lib/WebView';
+import CompositeComponent from './lib/CompositeComponent';
 
-export { WebView };
+export { WebView, CompositeComponent };
 export default WebView;
