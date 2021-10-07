@@ -1702,6 +1702,19 @@ protected static class RNCWebView extends WebView implements LifecycleEventListe
     destroy();
   }
 
+  public boolean addNativeComponent(View view) {
+    boolean isRemoved = false;
+    if (view != null) {
+      if(view.getParent() != null) {
+        ((ViewGroup)view.getParent()).removeView(view);
+        isRemoved = true;
+      }
+      this.addView(view);
+    }
+    return isRemoved;
+  }
+
+
   @Override
   public void destroy() {
     if (mWebChromeClient != null) {

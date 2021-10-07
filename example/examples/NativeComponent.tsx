@@ -1,7 +1,7 @@
 import React, {Component} from 'react';
-import {View, findNodeHandle} from 'react-native';
+import {View, findNodeHandle, Text} from 'react-native';
 
-import WebView, { CompositeComponent } from 'react-native-webview';
+import WebView, {CompositeComponent} from 'react-native-webview';
 
 interface Props {}
 
@@ -15,13 +15,12 @@ export default class NativeComponent extends Component<Props, State> {
   state: State = {};
 
   get webviewTag(): number | null {
-    const { current: webview } = this.webViewRef;
+    const {current: webview} = this.webViewRef;
     if (webview) {
       return findNodeHandle((webview as any).webViewRef.current);
     }
     return 0;
   }
-  
 
   render() {
     return (
@@ -31,13 +30,32 @@ export default class NativeComponent extends Component<Props, State> {
           source={{uri: 'https://tiki.vn'}}
           style={{width: '100%', height: '100%'}}
           onLoad={() => {
-            this.setState({ webViewTag: this.webviewTag });
+            this.setState({webViewTag: this.webviewTag});
           }}
           // setSupportMultipleWindows={false}
         />
         {this.state.webViewTag && (
           <CompositeComponent webviewTag={this.state.webViewTag}>
-            <View style={{ backgroundColor: 'red', top: 0, left: 0, height: 100, width: '100%' }}/>
+            <View
+              style={{
+                backgroundColor: 'red',
+                top: 200,
+                left: 0,
+                height: 100,
+                width: '100%',
+              }}>
+              <Text>Hello</Text>
+            </View>
+            <View
+              style={{
+                backgroundColor: 'red',
+                top: 200,
+                left: 0,
+                height: 100,
+                width: '100%',
+              }}>
+              <Text>Hello</Text>
+            </View>
           </CompositeComponent>
         )}
       </View>

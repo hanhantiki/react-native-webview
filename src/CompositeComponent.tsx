@@ -1,5 +1,8 @@
+import { requireNativeComponent } from 'react-native';
 import { CompositeComponentProps } from './WebViewTypes';
 
-const CompositeComponent: React.FunctionComponent<CompositeComponentProps> = () => null;
+const CompositeComponent = requireNativeComponent<CompositeComponentProps>(
+  'RNTCompositeComponent',
+);
 
-export default CompositeComponent
+export default CompositeComponent;
