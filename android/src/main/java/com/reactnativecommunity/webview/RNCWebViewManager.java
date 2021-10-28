@@ -87,10 +87,12 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Array;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -541,6 +543,15 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     view.loadUrl(BLANK_URL);
   }
 
+  @ReactProp(name = "appMeta")
+  public void setAppMeta(WebView view, @Nullable ReadableMap appMeta) {
+    TNAppDatSource appDataSource = new TNAppDatSource(appMeta);
+    RNCWebViewClient client = ((RNCWebView) view).getRNCWebViewClient();
+    if (client != null) {
+      client.setAppDatSource(appDataSource);
+    }
+  }
+
   @ReactProp(name = "onContentSizeChange")
   public void setOnContentSizeChange(WebView view, boolean sendContentSizeChangeEvents) {
     ((RNCWebView) view).setSendContentSizeChangeEvents(sendContentSizeChangeEvents);
@@ -815,6 +826,15 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     protected @Nullable
     String ignoreErrFailedForThisURL = null;
 
+
+
+    public void setAppDatSource(@Nullable TNAppDatSource appDatSource) {
+      this.appDatSource = appDatSource;
+    }
+
+    protected  @Nullable
+    TNAppDatSource appDatSource = null;
+
     public void setIgnoreErrFailedForThisURL(@Nullable String url) {
       ignoreErrFailedForThisURL = url;
     }
@@ -824,6 +844,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
       Uri originUrl = Uri.parse(url);
       String scheme = originUrl.getScheme();
       String host = originUrl.getHost();
+
       if (scheme.equals("miniapp-resource")) {
         try {
           if (host.equals("tinibridge")) {
@@ -835,7 +856,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
             final String[] response = {null};
             final boolean[] isExecuting = {false};
             long startTime = System.currentTimeMillis();
-            while (null == response[0] && (System.currentTimeMillis()-startTime) < 5000) {
+            while (null == response[0] && (System.currentTimeMillis() - startTime) < 5000) {
               if (isExecuting[0]) {
                 continue;
               }
@@ -844,7 +865,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
                 view.post(() -> view.evaluateJavascript(script, s -> {
                   if (s != null && s.length() > 0 && !s.equals("null")) {
                     response[0] = s.startsWith("\"") && s.endsWith("\"")
-                      ? s.substring(1, s.length() -1 ).replaceAll("\\\\", "")
+                      ? s.substring(1, s.length() - 1).replaceAll("\\\\", "")
                       : s;
                   }
                   isExecuting[0] = false;
@@ -859,13 +880,31 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
             } else {
               return new WebResourceResponse("text/plain", "utf-8", new ByteArrayInputStream(response[0].getBytes()));
             }
+          } else if (host.equals("framework")) {
+            String path = originUrl.getPath();
+            if (path != null) {
+              int indexOfFileSeparator = path.lastIndexOf("/");
+              String[] components = path.split("/");
+              String folder = TextUtils.join("/", Arrays.copyOfRange(components, 0, components.length - 1));
+              String fileName = components[components.length - 1];
+              Uri frameworkUri = null;
+              if (fileName.startsWith("tf-tiniapp.render.js") || fileName.startsWith("tf-miniapp.render.js")) {
+                frameworkUri = Uri.parse(this.appDatSource.getRenderFrameWorkPath());
+              } else if (fileName.startsWith("tf-tiniapp.worker.js") || fileName.startsWith("tf-miniapp.worker.js")) {
+                frameworkUri = Uri.parse(this.appDatSource.getWorkerFrameworkPath());
+              }
+
+              if (frameworkUri != null) {
+                Log.i("RNCWebViewClient", frameworkUri.toString());
+              }
+            }
           }
         } catch (Exception e) {
           return super.shouldInterceptRequest(view, url);
         }
       }
       return super.shouldInterceptRequest(view, url);
-}
+  }
 
   @Override
   public void onPageFinished(WebView webView, String url) {

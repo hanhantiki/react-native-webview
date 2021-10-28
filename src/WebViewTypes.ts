@@ -274,6 +274,8 @@ export interface CommonNativeWebViewProps extends ViewProps {
   // TODO: find a better way to type this.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   source: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  appMeta: any;
   userAgent?: string;
   /**
    * Append to the existing user-agent. Overridden if `userAgent` is set.
