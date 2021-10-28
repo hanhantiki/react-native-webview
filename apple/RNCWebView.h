@@ -94,4 +94,6 @@
 - (void)pullToRefresh:(UIRefreshControl *_Nonnull)refreshControl;
 #endif
 
+- (void)addNativeComponent:(UIView *_Nullable)view;
+
 @end

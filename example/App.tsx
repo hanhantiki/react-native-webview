@@ -20,6 +20,7 @@ import LocalPageLoad from './examples/LocalPageLoad';
 import Messaging from './examples/Messaging';
 import NativeWebpage from './examples/NativeWebpage';
 import ApplePay from './examples/ApplePay';
+import NativeComponent from './examples/NativeComponent';
 
 const TESTS = {
   Messaging: {
@@ -100,6 +101,14 @@ const TESTS = {
     description: 'Test to open a apple pay supported page',
     render() {
       return <ApplePay />;
+    },
+  },
+  NativeComponent: {
+    title: 'Native Component',
+    testId: 'NativeComponent',
+    description: 'Test render native component in WebView',
+    render() {
+      return <NativeComponent />;
     },
   }
 };
@@ -196,6 +205,11 @@ export default class App extends Component<Props, State> {
                   onPress={() => this._changeTest('ApplePay')}
               />
           )}
+          <Button
+            testID="testType_nativeComponent"
+            title="NativeComponent"
+            onPress={() => this._changeTest('NativeComponent')}
+          />
         </View>
 
         {restarting ? null : (

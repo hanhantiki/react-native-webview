@@ -9,6 +9,7 @@
 #import <React/RCTConvert.h>
 #import <React/RCTAutoInsetsProtocol.h>
 #import "RNCWKProcessPoolManager.h"
+#import "RNCWebViewCustomFileHandler.h"
 #if !TARGET_OS_OSX
 #import <UIKit/UIKit.h>
 #else
@@ -235,6 +236,9 @@ static NSDictionary* customCertificatesForHost;
   if(self.useSharedProcessPool) {
     wkWebViewConfig.processPool = [[RNCWKProcessPoolManager sharedManager] sharedProcessPool];
   }
+  RNCWebViewCustomFileHandler *schemeHandler = [[RNCWebViewCustomFileHandler alloc] init];
+  [wkWebViewConfig setURLSchemeHandler:schemeHandler forURLScheme:@"miniapp-resource"];
+
   wkWebViewConfig.userContentController = [WKUserContentController new];
 
 #if defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 130000 /* iOS 13 */
@@ -1423,6 +1427,20 @@ static NSDictionary* customCertificatesForHost;
     }
   }
   return request;
+}
+
+- (void)addNativeComponent:(UIView *)view {
+  if (view) {
+    UIView *contentView;
+    for (UIView *view in _webView.scrollView.subviews) {
+      if([[view.class description] hasPrefix:@"WKContentView"])
+        contentView = view;
+    }
+  
+    if (contentView) {
+      [contentView addSubview:view];
+    }
+  }
 }
 
 @end

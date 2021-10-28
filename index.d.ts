@@ -1,6 +1,6 @@
 import { Component } from 'react';
 // eslint-disable-next-line
-import { IOSWebViewProps, AndroidWebViewProps } from './lib/WebViewTypes';
+import { IOSWebViewProps, AndroidWebViewProps, CompositeComponentProps } from './lib/WebViewTypes';
 
 export { FileDownload, WebViewMessageEvent, WebViewNavigation } from "./lib/WebViewTypes";
 
@@ -61,5 +61,8 @@ declare class WebView<P = {}> extends Component<WebViewProps & P> {
     clearHistory: () => void;
 }
 
-export {WebView};
+declare class CompositeComponent extends Component<CompositeComponentProps> {
+}
+
+export {WebView, CompositeComponent};
 export default WebView;
