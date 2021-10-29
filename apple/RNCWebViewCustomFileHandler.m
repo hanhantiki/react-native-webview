@@ -28,7 +28,6 @@
   self = [super init];
   if (self) {
     self.holdUrlSchemeTasks = [[NSMutableDictionary alloc] init];
-    self.resourceCache = [[H5ResourceCache alloc] init];
     _appDataSource = dataSource;
   }
   return self;
