@@ -17,7 +17,6 @@
 @interface RNCWebViewCustomFileHandler ()
 
 @property (nonatomic, strong) NSMutableDictionary *holdUrlSchemeTasks;
-@property (nonatomic, strong) H5ResourceCache *resourceCache;
 @property (nonatomic, strong) TNAppDataSource *appDataSource;
 
 @end
