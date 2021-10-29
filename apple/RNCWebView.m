@@ -237,6 +237,7 @@ static NSDictionary* customCertificatesForHost;
   if(self.useSharedProcessPool) {
     wkWebViewConfig.processPool = [[RNCWKProcessPoolManager sharedManager] sharedProcessPool];
   }
+
   if (!_appMeta) {
     _appMeta = [[NSDictionary alloc] init];
   }
