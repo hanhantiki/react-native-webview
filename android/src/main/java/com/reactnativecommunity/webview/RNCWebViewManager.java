@@ -839,7 +839,6 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     String ignoreErrFailedForThisURL = null;
 
 
-
     public void setAppDatSource(@Nullable TNAppDatSource appDatSource) {
       this.appDatSource = appDatSource;
     }
@@ -868,6 +867,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
             final String[] response = {null};
             final boolean[] isExecuting = {false};
             long startTime = System.currentTimeMillis();
+
             while (null == response[0] && (System.currentTimeMillis() - startTime) < 5000) {
               if (isExecuting[0]) {
                 continue;

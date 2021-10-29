@@ -38,7 +38,6 @@
 
 - (void)webView:(WKWebView *)webView startURLSchemeTask:(id <WKURLSchemeTask>)urlSchemeTask  API_AVAILABLE(ios(11.0)){
   [self.holdUrlSchemeTasks setObject:@(YES) forKey:urlSchemeTask.description];
-  
   NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
   NSString *documentPath = [paths firstObject];
   NSURL * url = urlSchemeTask.request.URL;
@@ -248,7 +247,6 @@
     [urlSchemeTask didReceiveData:data];
     [urlSchemeTask didFinish];
 }
-
 
 #pragma mark - private
 
