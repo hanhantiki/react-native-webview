@@ -5,6 +5,7 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.DownloadManager;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -28,6 +29,7 @@ import android.webkit.CookieManager;
 import android.webkit.DownloadListener;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
+import android.webkit.MimeTypeMap;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.SslErrorHandler;
 import android.webkit.PermissionRequest;
@@ -49,6 +51,7 @@ import androidx.core.util.Pair;
 import com.facebook.common.logging.FLog;
 import com.facebook.react.modules.core.PermissionAwareActivity;
 import com.facebook.react.modules.core.PermissionListener;
+import com.facebook.react.modules.network.HeaderUtil;
 import com.facebook.react.views.scroll.ScrollEvent;
 import com.facebook.react.views.scroll.ScrollEventType;
 import com.facebook.react.views.scroll.OnScrollDispatchHelper;
@@ -85,9 +88,18 @@ import com.reactnativecommunity.webview.events.TopRenderProcessGoneEvent;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -885,17 +897,28 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
             if (path != null) {
               int indexOfFileSeparator = path.lastIndexOf("/");
               String[] components = path.split("/");
+              if (components[0].isEmpty()) {
+                components[0] = "/";
+              }
               String folder = TextUtils.join("/", Arrays.copyOfRange(components, 0, components.length - 1));
               String fileName = components[components.length - 1];
-              Uri frameworkUri = null;
+              URL frameworkURL = null;
               if (fileName.startsWith("tf-tiniapp.render.js") || fileName.startsWith("tf-miniapp.render.js")) {
-                frameworkUri = Uri.parse(this.appDatSource.getRenderFrameWorkPath());
+                frameworkURL = new URL(this.appDatSource.getRenderFrameWorkPath());
               } else if (fileName.startsWith("tf-tiniapp.worker.js") || fileName.startsWith("tf-miniapp.worker.js")) {
-                frameworkUri = Uri.parse(this.appDatSource.getWorkerFrameworkPath());
+                frameworkURL = new URL(this.appDatSource.getWorkerFrameworkPath());
               }
 
-              if (frameworkUri != null) {
-                Log.i("RNCWebViewClient", frameworkUri.toString());
+              if (frameworkURL != null) {
+                final Context context = view.getContext();
+                ContextWrapper cw = new ContextWrapper(context);
+                File directory = cw.getDir("tiki-miniapp", Context.MODE_PRIVATE);
+                String folderHash = MD5Utils.getMD5(folder).toLowerCase();
+                File filePath = new File(directory, "frameworks/" + folderHash + "/" + path);
+                WebResourceResponse response = this.loadURL(frameworkURL, filePath);
+                if (response != null) {
+                  return response;
+                }
               }
             }
           }
@@ -904,7 +927,68 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
         }
       }
       return super.shouldInterceptRequest(view, url);
-  }
+    }
+
+    private WebResourceResponse loadURL(URL url, File filePath)  {
+      HttpURLConnection connection = null;
+      InputStream inputStream = null;
+      try {
+        if (!filePath.exists()) {
+          // create folder if it does not exists
+          filePath.getParentFile().mkdirs();
+          connection = (HttpURLConnection)url.openConnection();
+          connection.setUseCaches(true);
+          connection.setConnectTimeout(15000);
+          connection.setReadTimeout(15000);
+          connection.connect();
+          int responseCode = connection.getResponseCode();
+          if (responseCode == HttpURLConnection.HTTP_OK) {
+            inputStream = connection.getInputStream();
+            // read from temp stream and write to file
+            FileOutputStream fileOutputStream = new FileOutputStream(filePath, false);
+            byte data[] = new byte[10 * 1024];
+            long total = 0;
+            int count;
+            while ((count = inputStream.read(data)) != -1) {
+              total += count;
+              fileOutputStream.write(data, 0, count);
+            }
+            fileOutputStream.flush();
+            fileOutputStream.close();
+          }
+        }
+
+        if (filePath.exists()) {
+          String mimeType = this.getMimeType(filePath.getAbsolutePath());
+          FileInputStream fileInputStream = new FileInputStream(filePath);
+          return new WebResourceResponse(mimeType, "UTF-8", fileInputStream);
+        }
+      } catch (Exception e) {
+        Log.e("RNCWebViewManager", e.toString());
+      } finally {
+        try {
+          if (connection != null) {
+            connection.disconnect();
+          }
+          if (inputStream != null) {
+            inputStream.close();
+          }
+        } catch (Exception e) {
+        }
+      }
+      return null;
+    }
+
+    private String getMimeType(String url) {
+      String extension = MimeTypeMap.getFileExtensionFromUrl(url);
+      if (extension != null) {
+        String type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+        if (type != null) {
+          return type;
+        }
+      }
+      return "text/html";
+    }
 
   @Override
   public void onPageFinished(WebView webView, String url) {
