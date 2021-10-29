@@ -12,7 +12,6 @@
 #import <MobileCoreServices/MobileCoreServices.h>
 #import "TNAppDataSource.h"
 #import "NSString+MD5.h"
-#import "H5ResourceCache.h"
 #import <objc/message.h>
 
 @interface RNCWebViewCustomFileHandler ()
