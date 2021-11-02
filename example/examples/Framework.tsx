@@ -9,7 +9,7 @@ export default class Framework extends Component<Props, State> {
             <View style={{ width: '100%', height: '100%' }}>
                 <WebView appMeta={{
                   renderFrameWorkPath: 'http://localhost:8081/tf-tiniapp.render.js',
-                  workerFrameWorkPath: 'http://localhost:8081/tf-tiniapp.render.js',
+                  workerFrameWorkPath: 'http://localhost:8081/tf-tiniapp.worker.js',
                 }} source={{ uri: 'http://localhost:8081/tf-tiniapp.html' }}/>
           </View>
         </View>

@@ -2,9 +2,72 @@
 <html>
     <head>
         <title>Test</title>
+        <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     </head>
     <body>
         <h2>Local page test</h2>
-        <script src="miniapp-resource://framework/tf-tiniapp.render.js"></script>
+        <div id="cdnchart_div" style="width: 900px; height: 500px;"></div>
+        <div id="schemechart_div" style="width: 900px; height: 500px;"></div>
+        <script>
+            const worker = new Worker('./test_worker.js');
+            worker.onmessage = (e) => {
+                const { data } = e;
+                const { connection } = data;
+                const connTypes = JSON.parse(localStorage.getItem('types')) || [];
+                if (connTypes.indexOf(connection) === -1) {
+                    connTypes.push(connection);
+                    localStorage.setItem('types', JSON.stringify(connTypes));
+                }
+                const connData = JSON.parse(localStorage.getItem(connection)) || [];
+                connData.push(e.data);
+                localStorage.setItem(connection, JSON.stringify(connData));
+            }
+            window.onload = () => {
+                function drawChart() {
+                    const connTypes = JSON.parse(localStorage.getItem('types')) || [];
+                    let rawData = connTypes.reduce((ret, type) => {
+                        const connData = JSON.parse(localStorage.getItem(type)) || [];
+                        for (let i = connData.length - 1; i > 0; i--) {
+                            if (connData[i].url === 'https://tiniapp.tikicdn.com/tiniapps/framework_files/1.81.22/worker_files/tf-tiniapp.worker.js') {
+                                const sample = connData[i];
+                                ret.push([sample.connection, sample.importScriptsCosts, sample.loadCosts]);
+                                break;
+                            }
+                        }
+                        return ret;
+                    }, [['Network',  'importScripts costs', 'Load script costs']]);
+                    let data = google.visualization.arrayToDataTable(rawData);
+
+                    const options = {
+                        // title: 'The decline of \'The 39 Steps\'',
+                        // vAxis: {title: 'Accumulated Rating'},
+                        isStacked: true
+                    };
+
+                    const cdnChart = new google.visualization.SteppedAreaChart(document.getElementById('cdnchart_div'));
+                    cdnChart.draw(data, options);
+
+
+                    rawData = connTypes.reduce((ret, type) => {
+                        const connData = JSON.parse(localStorage.getItem(type)) || [];
+                        for (let i = connData.length - 1; i > 0; i--) {
+                            if (connData[i].url === 'miniapp-resource://framework/tf-tiniapp.worker.js') {
+                                const sample = connData[i];
+                                ret.push([sample.connection, sample.importScriptsCosts, sample.loadCosts]);
+                                break;
+                            }
+                        }
+                        return ret;
+                    }, [['Network',  'importScripts costs', 'Load script costs']]);
+                    data = google.visualization.arrayToDataTable(rawData);
+
+                    const schemeChart = new google.visualization.SteppedAreaChart(document.getElementById('schemechart_div'));
+                    schemeChart.draw(data, options);
+                }
+
+                google.charts.load('current', {'packages':['corechart']});
+                google.charts.setOnLoadCallback(drawChart);
+            };
+        </script>
     </body>
 </html>
