@@ -9,7 +9,7 @@
 #import <React/RCTBridge.h>
 #import <React/RCTUIManager.h>
 #import <React/UIView+React.h>
-#import <react-native-webview/RNCWebView.h>
+#import "RNCWebView.h"
 
 @implementation RNTCompositeComponent {
   __weak RCTBridge *_bridge;
