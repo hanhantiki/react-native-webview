@@ -943,7 +943,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
             connection.setUseCaches(true);
             connection.setConnectTimeout(15000);
             connection.setReadTimeout(15000);
-//            connection.connect();
+
             int responseCode = connection.getResponseCode();
             if (responseCode == HttpURLConnection.HTTP_OK) {
               inputStream = connection.getInputStream();
@@ -959,26 +959,14 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
               fileOutputStream.flush();
               fileOutputStream.close();
             }
-//            String contentHeader = connection.getHeaderField("Content-Length");
-//            headers.put("Content-Length", contentHeader);
-            // Bypass CORS
-//            Map<String, String> headers = new HashMap<String, String>();
-//            return new WebResourceResponse(
-//              connection.getContentType(),
-//              connection.getContentEncoding(),
-//              connection.getResponseCode(),
-//              connection.getResponseMessage(),
-//              headers,
-//              connection.getInputStream()
-//            );
           }
 
           if (filePath.exists()) {
             FileInputStream fileInputStream = new FileInputStream(filePath);
             Map<String, String> headers = new HashMap<String, String>();
-//            headers.put("Access-Control-Allow-Origin", "*");
-//            headers.put("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT, OPTIONS");
-//            headers.put("Access-Control-Allow-Headers", "agent, user-data, Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
+            headers.put("Access-Control-Allow-Origin", "*");
+            headers.put("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT, OPTIONS");
+            headers.put("Access-Control-Allow-Headers", "agent, user-data, Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
             String mimeType = this.getMimeType(filePath.getAbsolutePath());
             return new WebResourceResponse(mimeType, "UTF-8", 200, "OK", headers, fileInputStream);
           }
