@@ -8,7 +8,7 @@ const totalCosts = Date.now() - startLoadScript;
 const importScriptsCosts = __frameworkStartTime - startLoadScript;
 const loadCosts = __frameworkEndTime - __frameworkStartTime;
 
-const { connection } = navigator;
+const { connection = { effectiveType: '4g' } } = navigator;
 console.log(`connection: ${connection.effectiveType}`);
 console.log(`importScripts costs: ${importScriptsCosts}ms`)
 console.log(`  Load script costs: ${loadCosts}ms`);
