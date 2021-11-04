@@ -21,6 +21,7 @@ import Messaging from './examples/Messaging';
 import NativeWebpage from './examples/NativeWebpage';
 import ApplePay from './examples/ApplePay';
 import NativeComponent from './examples/NativeComponent';
+import Framework from './examples/Framework';
 
 const TESTS = {
   Messaging: {
@@ -109,6 +110,14 @@ const TESTS = {
     description: 'Test render native component in WebView',
     render() {
       return <NativeComponent />;
+    },
+  },
+  Framework: {
+    title: 'Framework',
+    testId: 'Framework',
+    description: 'Test load framework in WebView',
+    render() {
+      return <Framework />;
     },
   }
 };
@@ -209,6 +218,11 @@ export default class App extends Component<Props, State> {
             testID="testType_nativeComponent"
             title="NativeComponent"
             onPress={() => this._changeTest('NativeComponent')}
+          />
+          <Button
+            testID="testType_framework"
+            title="Framework"
+            onPress={() => this._changeTest('Framework')}
           />
         </View>
 

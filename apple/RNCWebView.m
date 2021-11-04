@@ -113,6 +113,7 @@ static NSDictionary* customCertificatesForHost;
 #if defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 130000 /* __IPHONE_13_0 */
   BOOL _savedAutomaticallyAdjustsScrollIndicatorInsets;
 #endif
+  TNAppDataSource *_dataSource;
 }
 
 - (instancetype)initWithFrame:(CGRect)frame
@@ -236,7 +237,13 @@ static NSDictionary* customCertificatesForHost;
   if(self.useSharedProcessPool) {
     wkWebViewConfig.processPool = [[RNCWKProcessPoolManager sharedManager] sharedProcessPool];
   }
-  RNCWebViewCustomFileHandler *schemeHandler = [[RNCWebViewCustomFileHandler alloc] init];
+
+  if (!_appMeta) {
+    _appMeta = [[NSDictionary alloc] init];
+  }
+  TNAppDataSource *_dataSource = [[TNAppDataSource alloc] initWithAppMeta:_appMeta];
+  RNCWebViewCustomFileHandler *schemeHandler = [[RNCWebViewCustomFileHandler alloc] initWithDataSource:_dataSource];
+  
   [wkWebViewConfig setURLSchemeHandler:schemeHandler forURLScheme:@"miniapp-resource"];
 
   wkWebViewConfig.userContentController = [WKUserContentController new];

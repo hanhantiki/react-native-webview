@@ -5,6 +5,7 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.DownloadManager;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -28,6 +29,7 @@ import android.webkit.CookieManager;
 import android.webkit.DownloadListener;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
+import android.webkit.MimeTypeMap;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.SslErrorHandler;
 import android.webkit.PermissionRequest;
@@ -86,11 +88,17 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -541,6 +549,15 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     view.loadUrl(BLANK_URL);
   }
 
+  @ReactProp(name = "appMeta")
+  public void setAppMeta(WebView view, @Nullable ReadableMap appMeta) {
+    TNAppDatSource appDataSource = new TNAppDatSource(appMeta);
+    RNCWebViewClient client = ((RNCWebView) view).getRNCWebViewClient();
+    if (client != null) {
+      client.setAppDatSource(appDataSource);
+    }
+  }
+
   @ReactProp(name = "onContentSizeChange")
   public void setOnContentSizeChange(WebView view, boolean sendContentSizeChangeEvents) {
     ((RNCWebView) view).setSendContentSizeChangeEvents(sendContentSizeChangeEvents);
@@ -815,15 +832,25 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     protected @Nullable
     String ignoreErrFailedForThisURL = null;
 
+
+    public void setAppDatSource(@Nullable TNAppDatSource appDatSource) {
+      this.appDatSource = appDatSource;
+    }
+
+    protected  @Nullable
+    TNAppDatSource appDatSource = null;
+
     public void setIgnoreErrFailedForThisURL(@Nullable String url) {
       ignoreErrFailedForThisURL = url;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
     public WebResourceResponse shouldInterceptRequest(final WebView view, String url) {
       Uri originUrl = Uri.parse(url);
       String scheme = originUrl.getScheme();
       String host = originUrl.getHost();
+
       if (scheme.equals("miniapp-resource")) {
         try {
           if (host.equals("tinibridge")) {
@@ -835,7 +862,8 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
             final String[] response = {null};
             final boolean[] isExecuting = {false};
             long startTime = System.currentTimeMillis();
-            while (null == response[0] && (System.currentTimeMillis()-startTime) < 5000) {
+
+            while (null == response[0] && (System.currentTimeMillis() - startTime) < 5000) {
               if (isExecuting[0]) {
                 continue;
               }
@@ -844,7 +872,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
                 view.post(() -> view.evaluateJavascript(script, s -> {
                   if (s != null && s.length() > 0 && !s.equals("null")) {
                     response[0] = s.startsWith("\"") && s.endsWith("\"")
-                      ? s.substring(1, s.length() -1 ).replaceAll("\\\\", "")
+                      ? s.substring(1, s.length() - 1).replaceAll("\\\\", "")
                       : s;
                   }
                   isExecuting[0] = false;
@@ -859,13 +887,124 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
             } else {
               return new WebResourceResponse("text/plain", "utf-8", new ByteArrayInputStream(response[0].getBytes()));
             }
+          } else if (host.equals("framework")) {
+            String path = originUrl.getPath();
+            if (path != null) {
+              int indexOfFileSeparator = path.lastIndexOf("/");
+              String[] components = path.split("/");
+              if (components[0].isEmpty()) {
+                components[0] = "/";
+              }
+              String folder = TextUtils.join("/", Arrays.copyOfRange(components, 0, components.length - 1));
+              String fileName = components[components.length - 1];
+              URL frameworkURL = null;
+              if (fileName.startsWith("tf-tiniapp.render.js") || fileName.startsWith("tf-miniapp.render.js")) {
+                frameworkURL = new URL(this.appDatSource.getRenderFrameWorkPath());
+              } else if (fileName.startsWith("tf-tiniapp.worker.js") || fileName.startsWith("tf-miniapp.worker.js")) {
+                frameworkURL = new URL(this.appDatSource.getWorkerFrameworkPath());
+              }
+
+              if (frameworkURL != null) {
+                final Context context = view.getContext();
+                ContextWrapper cw = new ContextWrapper(context);
+                File cacheDir = cw.getCacheDir();
+                String folderHash = MD5Utils.getMD5(folder).toLowerCase();
+                File filePath = new File(cacheDir, "tiki-miniapp/frameworks/" + folderHash + "/" + path);
+                boolean disableCache = false;
+                String fragment = originUrl.getFragment();
+                if (fragment != null) {
+                  disableCache = fragment.contains("NOCACHE");
+                }
+                WebResourceResponse response = this.loadURL(frameworkURL, filePath, disableCache);
+                if (response != null) {
+                  return response;
+                }
+              }
+            }
           }
         } catch (Exception e) {
           return super.shouldInterceptRequest(view, url);
         }
       }
       return super.shouldInterceptRequest(view, url);
-}
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private WebResourceResponse loadURL(URL url, File filePath, boolean disableCache)  {
+      HttpURLConnection connection = null;
+      InputStream inputStream = null;
+      try {
+        Map<String, String> headers = new HashMap<>();
+
+        if (!filePath.exists() || disableCache) {
+          // create folder if it does not exists
+          filePath.getParentFile().mkdirs();
+          connection = (HttpURLConnection) url.openConnection();
+          // use cache in normal request, but when has #NOCACHE option
+          // we prefer over network
+          connection.setUseCaches(!disableCache);
+          connection.setConnectTimeout(15000);
+          connection.setReadTimeout(15000);
+
+          for (Map.Entry<String, List<String>> entries : connection.getHeaderFields().entrySet()) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+              headers.put(entries.getKey(), String.join(", ", entries.getValue()));
+            }
+          }
+
+          int responseCode = connection.getResponseCode();
+          if (responseCode == HttpURLConnection.HTTP_OK) {
+            inputStream = connection.getInputStream();
+            // read from temp stream and write to file
+            FileOutputStream fileOutputStream = new FileOutputStream(filePath, false);
+            byte data[] = new byte[10 * 1024];
+            long total = 0;
+            int count;
+            while ((count = inputStream.read(data)) != -1) {
+              total += count;
+              fileOutputStream.write(data, 0, count);
+            }
+            fileOutputStream.flush();
+            fileOutputStream.close();
+          }
+        } else {
+          headers.put("Access-Control-Allow-Origin", "*");
+          headers.put("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT, OPTIONS");
+          headers.put("Access-Control-Allow-Headers", "agent, user-data, Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
+          headers.put("X-Powered-By", "Tiniapp");
+        }
+
+        if (filePath.exists()) {
+          FileInputStream fileInputStream = new FileInputStream(filePath);
+          String mimeType = this.getMimeType(filePath.getAbsolutePath());
+          return new WebResourceResponse(mimeType, "UTF-8", 200, "OK", headers, fileInputStream);
+        }
+      } catch (Exception e) {
+        Log.e("RNCWebViewManager", e.toString());
+      } finally {
+        try {
+          if (connection != null) {
+            connection.disconnect();
+          }
+          if (inputStream != null) {
+            inputStream.close();
+          }
+        } catch (Exception e) {
+        }
+      }
+      return null;
+    }
+
+    private String getMimeType(String url) {
+      String extension = MimeTypeMap.getFileExtensionFromUrl(url);
+      if (extension != null) {
+        String type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+        if (type != null) {
+          return type;
+        }
+      }
+      return "text/html";
+    }
 
   @Override
   public void onPageFinished(WebView webView, String url) {

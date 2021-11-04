@@ -1,4 +1,5 @@
 package com.reactnativecommunity.webview;
+
 import android.view.View;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.uimanager.UIManagerModule;
@@ -10,7 +11,6 @@ class RNCCompositeView extends ReactViewGroup {
   private ReactContext mContext = null;
 
   private RNCWebViewManager.RNCWebView mWebView = null;
-
 
   public RNCCompositeView(ReactContext context) {
     super(context);

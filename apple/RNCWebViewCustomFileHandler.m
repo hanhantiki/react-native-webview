@@ -7,13 +7,34 @@
 
 
 #import "RNCWebViewCustomFileHandler.h"
+#import <React/RCTMultipartDataTask.h>
+#import <React/RCTJavaScriptLoader.h>
 #import <MobileCoreServices/MobileCoreServices.h>
-
+#import "TNAppDataSource.h"
+#import "NSString+MD5.h"
 #import <objc/message.h>
+
+@interface RNCWebViewCustomFileHandler ()
+
+@property (nonatomic, strong) NSMutableDictionary *holdUrlSchemeTasks;
+@property (nonatomic, strong) TNAppDataSource *appDataSource;
+
+@end
 
 @implementation RNCWebViewCustomFileHandler
 
+- (instancetype)initWithDataSource:(TNAppDataSource *)dataSource
+{
+  self = [super init];
+  if (self) {
+    self.holdUrlSchemeTasks = [[NSMutableDictionary alloc] init];
+    _appDataSource = dataSource;
+  }
+  return self;
+}
+
 - (void)webView:(WKWebView *)webView startURLSchemeTask:(id <WKURLSchemeTask>)urlSchemeTask  API_AVAILABLE(ios(11.0)){
+  [self.holdUrlSchemeTasks setObject:@(YES) forKey:urlSchemeTask.description];
   NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
   NSString *documentPath = [paths firstObject];
   NSURL * url = urlSchemeTask.request.URL;
@@ -86,6 +107,34 @@
       [urlSchemeTask didReceiveData:data];
       [urlSchemeTask didFinish];
       return;
+    } else if ([host isEqualToString:@"framework"]) {
+      NSString *path = url.path;
+      if (path) {
+        // final url is remote url of framework files. URL can be:
+        // http://localhost:8080/tf-tiniapp.render.js
+        // https://tiniapp-dev.tikicdn.com/tiniapps/framework_files/1.81.18/worker_files/tf-tiniapp.render.js
+        // https://tiniapp-dev.tikicdn.com/tiniapps/framework_files/1.81.18/worker_files/tf-tiniapp.render.js#NOCACHE
+        NSURL *frameworkUrl;
+        NSArray *components = [path pathComponents];
+        NSString *folder = [NSString pathWithComponents:[components subarrayWithRange:(NSRange){ 0, components.count - 1}]];
+        NSString *fileName = [components lastObject];
+        NSString *fragment = url.fragment;
+        if ([fileName hasPrefix:@"tf-tiniapp.render.js"] || [fileName hasPrefix:@"tf-miniapp.render.js"]) {
+          frameworkUrl = [[NSURL alloc] initWithString:_appDataSource.renderFrameWorkPath];
+        } else if ([fileName hasPrefix:@"tf-tiniapp.worker.js"] || [fileName hasPrefix:@"tf-miniapp.worker.js"]) {
+          frameworkUrl = [[NSURL alloc] initWithString:_appDataSource.workerFrameworkPath];
+        }
+        
+        if (frameworkUrl) { 
+          NSString *documentDir = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) firstObject];
+          
+          NSString *folderHash = [folder MD5Hash];
+          NSString *cacheFilePath = [NSString stringWithFormat:@"%@/tiki-miniapp/frameworks/%@%@", documentDir, folderHash, path];
+          bool disableCache = [fragment containsString:@"NOCACHE"];
+          [self loadURL:frameworkUrl localFile:cacheFilePath urlSchemeTask: urlSchemeTask disableCache:disableCache];
+        }
+        return;
+      }
     } else {
       if ([stringToLoad hasPrefix:@"/resource"]) {
         documentPath = [stringToLoad stringByReplacingOccurrencesOfString:@"/resource" withString:@""];
@@ -125,7 +174,90 @@
 }
 
 - (void)webView:(nonnull WKWebView *)webView stopURLSchemeTask:(nonnull id<WKURLSchemeTask>)urlSchemeTask  API_AVAILABLE(ios(11.0)){
+  [self.holdUrlSchemeTasks setObject:@(NO) forKey:urlSchemeTask.description];
 }
+
+- (void)loadURL:(NSURL *)url localFile:(NSString *)filePath urlSchemeTask:(id <WKURLSchemeTask>)urlSchemeTask disableCache:(bool)disableCache API_AVAILABLE(ios(11.0)){
+    if (filePath.length == 0 || !urlSchemeTask) {
+      return;
+    }
+  
+    if (![[NSFileManager defaultManager] fileExistsAtPath:filePath] || disableCache) {
+      [self requestRemoteURL:url urlSchemeTask:urlSchemeTask filePath:filePath];
+    } else {
+      NSData *data = [NSData dataWithContentsOfFile:filePath options:NSDataReadingMappedIfSafe error:nil];
+      if (!data) {
+        return;
+      }
+      [self resendRequestWithUrlSchemeTask:urlSchemeTask mimeType:[self getMimeTypeWithFilePath:filePath] requestData:data];
+    }
+}
+
+- (void)requestRemoteURL:(NSURL *)url urlSchemeTask:(id <WKURLSchemeTask>)urlSchemeTask filePath:(NSString *)filePath API_AVAILABLE(ios(11.0)) {
+    if (![self.holdUrlSchemeTasks objectForKey:urlSchemeTask.description]) {
+      return;
+    }
+
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
+    NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
+    configuration.timeoutIntervalForRequest = 15;
+    configuration.allowsCellularAccess = YES;
+    configuration.HTTPAdditionalHeaders = @{@"Accept": @"text/html,application/json,text/json,text/javascript,text/plain,application/javascript,text/css,image/svg+xml,application/font-woff2,font/woff2,application/octet-stream",
+                                            @"Accept-Language": @"en"};
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:configuration];
+    NSURLSessionDataTask *dataTask = [session dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+        // response the request
+        [urlSchemeTask didReceiveResponse:response];
+        [urlSchemeTask didReceiveData:data];
+        // save content to disk
+        if (error) {
+            [urlSchemeTask didFailWithError:error];
+        } else {
+            NSArray *components = [filePath pathComponents];
+            NSString *folder = [NSString pathWithComponents:[components subarrayWithRange:(NSRange){ 0, components.count - 1}]];
+            // if the directory does not exist, create it...
+            if ([[NSFileManager defaultManager] createDirectoryAtPath:folder withIntermediateDirectories:YES attributes:nil error:&error] == NO) {
+                NSLog(@"createDirectoryAtPath failed %@", error);
+            }
+            [data writeToFile:filePath atomically:YES];
+            [urlSchemeTask didFinish];
+        }
+    }];
+
+    [dataTask resume];
+    [session finishTasksAndInvalidate];
+}
+
+- (void)resendRequestWithUrlSchemeTask:(id <WKURLSchemeTask>)urlSchemeTask
+                              mimeType:(NSString *)mimeType
+                           requestData:(NSData *)requestData  API_AVAILABLE(ios(11.0)) {
+    if (!urlSchemeTask || !urlSchemeTask.request || !urlSchemeTask.request.URL) {
+        return;
+    }
+    if (!self.holdUrlSchemeTasks[urlSchemeTask.description]) {
+      return;
+    }
+
+    NSString *mimeType_local = mimeType ? mimeType : @"text/html";
+    NSData *data = requestData ? requestData : [NSData data];
+    NSDictionary *headers = @{
+      @"Access-Control-Allow-Origin": @"*",
+      @"Access-Control-Allow-Methods": @"GET, POST, DELETE, PUT, OPTIONS",
+      @"Access-Control-Allow-Headers": @"agent, user-data, Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers",
+      @"Content-Type": [mimeType_local stringByAppendingString:@"; charset=UTF-8"],
+      @"X-Powered-By": @"Tiniapp"
+    };
+    NSHTTPURLResponse *response = [[NSHTTPURLResponse alloc]
+                                   initWithURL:urlSchemeTask.request.URL
+                                   statusCode:200
+                                   HTTPVersion:@"HTTP/1.1"
+                                   headerFields:headers];
+    [urlSchemeTask didReceiveResponse:response];
+    [urlSchemeTask didReceiveData:data];
+    [urlSchemeTask didFinish];
+}
+
+#pragma mark - private
 
 -(NSString *) getMimeType:(NSString *)fileExtension {
   if (fileExtension && ![fileExtension isEqualToString:@""]) {
@@ -146,5 +278,18 @@
   return NO;
 }
 
+- (NSString *)getMimeTypeWithFilePath:(NSString *)filePath
+{
+    CFStringRef pathExtension = (__bridge_retained CFStringRef)[filePath pathExtension];
+    CFStringRef type = UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, pathExtension, NULL);
+    CFRelease(pathExtension);
+
+    //The UTI can be converted to a mime type:
+    NSString *mimeType = (__bridge_transfer NSString *)UTTypeCopyPreferredTagWithClass(type, kUTTagClassMIMEType);
+    if (type != NULL) {
+        CFRelease(type);
+    }
+    return mimeType;
+}
 
 @end

@@ -7,8 +7,11 @@
 
 #import <Foundation/Foundation.h>
 #import <WebKit/WebKit.h>
+#import "TNAppDataSource.h"
 
 
 @interface RNCWebViewCustomFileHandler : NSObject <WKURLSchemeHandler>
+
+- (instancetype)initWithDataSource:(TNAppDataSource *)dataSource;
 
 @end
