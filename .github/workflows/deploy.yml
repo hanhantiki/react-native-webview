@@ -1,5 +1,8 @@
 name: Publish RNWebView version
-on: [master]
+on:
+  push:
+    branches:
+      - master
 
 jobs:
   publish:
