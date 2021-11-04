@@ -913,9 +913,9 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
               if (frameworkURL != null) {
                 final Context context = view.getContext();
                 ContextWrapper cw = new ContextWrapper(context);
-                File directory = cw.getDir("tiki-miniapp", Context.MODE_PRIVATE);
+                File cacheDir = cw.getCacheDir();
                 String folderHash = MD5Utils.getMD5(folder).toLowerCase();
-                File filePath = new File(directory, "frameworks/" + folderHash + "/" + path);
+                File filePath = new File(cacheDir, "tiki-miniapp/frameworks/" + folderHash + "/" + path);
                 WebResourceResponse response = this.loadURL(frameworkURL, filePath);
                 if (response != null) {
                   return response;
@@ -932,56 +932,54 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private WebResourceResponse loadURL(URL url, File filePath)  {
-      if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-        HttpURLConnection connection = null;
-        InputStream inputStream = null;
-        try {
-          if (!filePath.exists()) {
-            // create folder if it does not exists
-            filePath.getParentFile().mkdirs();
-            connection = (HttpURLConnection) url.openConnection();
-            connection.setUseCaches(true);
-            connection.setConnectTimeout(15000);
-            connection.setReadTimeout(15000);
+      HttpURLConnection connection = null;
+      InputStream inputStream = null;
+      try {
+        if (!filePath.exists()) {
+          // create folder if it does not exists
+          filePath.getParentFile().mkdirs();
+          connection = (HttpURLConnection) url.openConnection();
+          connection.setUseCaches(true);
+          connection.setConnectTimeout(15000);
+          connection.setReadTimeout(15000);
 
-            int responseCode = connection.getResponseCode();
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-              inputStream = connection.getInputStream();
-              // read from temp stream and write to file
-              FileOutputStream fileOutputStream = new FileOutputStream(filePath, false);
-              byte data[] = new byte[10 * 1024];
-              long total = 0;
-              int count;
-              while ((count = inputStream.read(data)) != -1) {
-                total += count;
-                fileOutputStream.write(data, 0, count);
-              }
-              fileOutputStream.flush();
-              fileOutputStream.close();
+          int responseCode = connection.getResponseCode();
+          if (responseCode == HttpURLConnection.HTTP_OK) {
+            inputStream = connection.getInputStream();
+            // read from temp stream and write to file
+            FileOutputStream fileOutputStream = new FileOutputStream(filePath, false);
+            byte data[] = new byte[10 * 1024];
+            long total = 0;
+            int count;
+            while ((count = inputStream.read(data)) != -1) {
+              total += count;
+              fileOutputStream.write(data, 0, count);
             }
+            fileOutputStream.flush();
+            fileOutputStream.close();
           }
+        }
 
-          if (filePath.exists()) {
-            FileInputStream fileInputStream = new FileInputStream(filePath);
-            Map<String, String> headers = new HashMap<String, String>();
-            headers.put("Access-Control-Allow-Origin", "*");
-            headers.put("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT, OPTIONS");
-            headers.put("Access-Control-Allow-Headers", "agent, user-data, Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
-            String mimeType = this.getMimeType(filePath.getAbsolutePath());
-            return new WebResourceResponse(mimeType, "UTF-8", 200, "OK", headers, fileInputStream);
+        if (filePath.exists()) {
+          FileInputStream fileInputStream = new FileInputStream(filePath);
+          Map<String, String> headers = new HashMap<String, String>();
+          headers.put("Access-Control-Allow-Origin", "*");
+          headers.put("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT, OPTIONS");
+          headers.put("Access-Control-Allow-Headers", "agent, user-data, Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
+          String mimeType = this.getMimeType(filePath.getAbsolutePath());
+          return new WebResourceResponse(mimeType, "UTF-8", 200, "OK", headers, fileInputStream);
+        }
+      } catch (Exception e) {
+        Log.e("RNCWebViewManager", e.toString());
+      } finally {
+        try {
+          if (connection != null) {
+            connection.disconnect();
+          }
+          if (inputStream != null) {
+            inputStream.close();
           }
         } catch (Exception e) {
-          Log.e("RNCWebViewManager", e.toString());
-        } finally {
-          try {
-            if (connection != null) {
-              connection.disconnect();
-            }
-            if (inputStream != null) {
-              inputStream.close();
-            }
-          } catch (Exception e) {
-          }
         }
       }
       return null;
