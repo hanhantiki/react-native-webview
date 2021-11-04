@@ -113,10 +113,12 @@
         // final url is remote url of framework files. URL can be:
         // http://localhost:8080/tf-tiniapp.render.js
         // https://tiniapp-dev.tikicdn.com/tiniapps/framework_files/1.81.18/worker_files/tf-tiniapp.render.js
+        // https://tiniapp-dev.tikicdn.com/tiniapps/framework_files/1.81.18/worker_files/tf-tiniapp.render.js#NOCACHE
         NSURL *frameworkUrl;
         NSArray *components = [path pathComponents];
         NSString *folder = [NSString pathWithComponents:[components subarrayWithRange:(NSRange){ 0, components.count - 1}]];
         NSString *fileName = [components lastObject];
+        NSString *fragment = url.fragment;
         if ([fileName hasPrefix:@"tf-tiniapp.render.js"] || [fileName hasPrefix:@"tf-miniapp.render.js"]) {
           frameworkUrl = [[NSURL alloc] initWithString:_appDataSource.renderFrameWorkPath];
         } else if ([fileName hasPrefix:@"tf-tiniapp.worker.js"] || [fileName hasPrefix:@"tf-miniapp.worker.js"]) {
@@ -128,7 +130,8 @@
           
           NSString *folderHash = [folder MD5Hash];
           NSString *cacheFilePath = [NSString stringWithFormat:@"%@/tiki-miniapp/frameworks/%@%@", documentDir, folderHash, path];
-          [self loadURL:frameworkUrl localFile:cacheFilePath urlSchemeTask: urlSchemeTask];
+          bool disableCache = [fragment rangeOfString:@"NOCACHE"].location > 0;
+          [self loadURL:frameworkUrl localFile:cacheFilePath urlSchemeTask: urlSchemeTask disableCache:disableCache];
         }
         return;
       }
@@ -174,12 +177,12 @@
   [self.holdUrlSchemeTasks setObject:@(NO) forKey:urlSchemeTask.description];
 }
 
-- (void)loadURL:(NSURL *)url localFile:(NSString *)filePath urlSchemeTask:(id <WKURLSchemeTask>)urlSchemeTask API_AVAILABLE(ios(11.0)){
+- (void)loadURL:(NSURL *)url localFile:(NSString *)filePath urlSchemeTask:(id <WKURLSchemeTask>)urlSchemeTask disableCache:(bool)disableCache API_AVAILABLE(ios(11.0)){
     if (filePath.length == 0 || !urlSchemeTask) {
       return;
     }
   
-    if (![[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
+    if (![[NSFileManager defaultManager] fileExistsAtPath:filePath] || disableCache) {
       [self requestRemoteURL:url urlSchemeTask:urlSchemeTask filePath:filePath];
     } else {
       NSData *data = [NSData dataWithContentsOfFile:filePath options:NSDataReadingMappedIfSafe error:nil];

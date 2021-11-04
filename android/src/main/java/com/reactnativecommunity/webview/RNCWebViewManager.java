@@ -910,7 +910,12 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
                 File cacheDir = cw.getCacheDir();
                 String folderHash = MD5Utils.getMD5(folder).toLowerCase();
                 File filePath = new File(cacheDir, "tiki-miniapp/frameworks/" + folderHash + "/" + path);
-                WebResourceResponse response = this.loadURL(frameworkURL, filePath);
+                boolean disableCache = false;
+                String fragment = originUrl.getFragment();
+                if (fragment != null) {
+                  disableCache = fragment.contains("NOCACHE");
+                }
+                WebResourceResponse response = this.loadURL(frameworkURL, filePath, disableCache);
                 if (response != null) {
                   return response;
                 }
@@ -925,15 +930,13 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private WebResourceResponse loadURL(URL url, File filePath)  {
+    private WebResourceResponse loadURL(URL url, File filePath, boolean disableCache)  {
       HttpURLConnection connection = null;
       InputStream inputStream = null;
       try {
-        boolean remoteLoad = false;
         Map<String, String> headers = new HashMap<>();
 
-        if (!filePath.exists()) {
-          remoteLoad = true;
+        if (!filePath.exists() || disableCache) {
           // create folder if it does not exists
           filePath.getParentFile().mkdirs();
           connection = (HttpURLConnection) url.openConnection();
