@@ -179,15 +179,14 @@
       return;
     }
   
-    // if the resource do not exist, re-send request by replacing to http(s).
     if (![[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
-        [self requestRemoteURL:url urlSchemeTask:urlSchemeTask filePath:filePath];
+      [self requestRemoteURL:url urlSchemeTask:urlSchemeTask filePath:filePath];
     } else {
-        NSData *data = [NSData dataWithContentsOfFile:filePath options:NSDataReadingMappedIfSafe error:nil];
-        if (!data) {
-          return;
-        }
-        [self resendRequestWithUrlSchemeTask:urlSchemeTask mimeType:[self getMimeTypeWithFilePath:filePath] requestData:data];
+      NSData *data = [NSData dataWithContentsOfFile:filePath options:NSDataReadingMappedIfSafe error:nil];
+      if (!data) {
+        return;
+      }
+      [self resendRequestWithUrlSchemeTask:urlSchemeTask mimeType:[self getMimeTypeWithFilePath:filePath] requestData:data];
     }
 }
 
@@ -204,8 +203,10 @@
                                             @"Accept-Language": @"en"};
     NSURLSession *session = [NSURLSession sessionWithConfiguration:configuration];
     NSURLSessionDataTask *dataTask = [session dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+        // response the request
         [urlSchemeTask didReceiveResponse:response];
         [urlSchemeTask didReceiveData:data];
+        // save content to disk
         if (error) {
             [urlSchemeTask didFailWithError:error];
         } else {
