@@ -940,7 +940,9 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
           // create folder if it does not exists
           filePath.getParentFile().mkdirs();
           connection = (HttpURLConnection) url.openConnection();
-          connection.setUseCaches(true);
+          // use cache in normal request, but when has #NOCACHE option
+          // we prefer over network
+          connection.setUseCaches(!disableCache);
           connection.setConnectTimeout(15000);
           connection.setReadTimeout(15000);
 
