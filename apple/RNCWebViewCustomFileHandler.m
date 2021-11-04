@@ -237,10 +237,17 @@
 
     NSString *mimeType_local = mimeType ? mimeType : @"text/html";
     NSData *data = requestData ? requestData : [NSData data];
-    NSURLResponse *response = [[NSURLResponse alloc] initWithURL:urlSchemeTask.request.URL
-                                                        MIMEType:mimeType_local
-                                           expectedContentLength:data.length
-                                                textEncodingName:@"utf-8"];
+    NSDictionary *headers = @{
+      @"Access-Control-Allow-Origin": @"*",
+      @"Access-Control-Allow-Methods": @"GET, POST, DELETE, PUT, OPTIONS",
+      @"Access-Control-Allow-Headers": @"agent, user-data, Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers",
+      @"Content-Type": [mimeType_local stringByAppendingString:@"; charset=UTF-8"]
+    };
+    NSHTTPURLResponse *response = [[NSHTTPURLResponse alloc]
+                                   initWithURL:urlSchemeTask.request.URL
+                                   statusCode:200
+                                   HTTPVersion:@"HTTP/1.1"
+                                   headerFields:headers];
     [urlSchemeTask didReceiveResponse:response];
     [urlSchemeTask didReceiveData:data];
     [urlSchemeTask didFinish];

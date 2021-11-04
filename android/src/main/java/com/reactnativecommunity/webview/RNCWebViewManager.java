@@ -51,7 +51,6 @@ import androidx.core.util.Pair;
 import com.facebook.common.logging.FLog;
 import com.facebook.react.modules.core.PermissionAwareActivity;
 import com.facebook.react.modules.core.PermissionListener;
-import com.facebook.react.modules.network.HeaderUtil;
 import com.facebook.react.views.scroll.ScrollEvent;
 import com.facebook.react.views.scroll.ScrollEventType;
 import com.facebook.react.views.scroll.OnScrollDispatchHelper;
@@ -88,17 +87,12 @@ import com.reactnativecommunity.webview.events.TopRenderProcessGoneEvent;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Array;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -935,13 +929,23 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
       HttpURLConnection connection = null;
       InputStream inputStream = null;
       try {
+        boolean remoteLoad = false;
+        Map<String, String> headers = new HashMap<>();
+
         if (!filePath.exists()) {
+          remoteLoad = true;
           // create folder if it does not exists
           filePath.getParentFile().mkdirs();
           connection = (HttpURLConnection) url.openConnection();
           connection.setUseCaches(true);
           connection.setConnectTimeout(15000);
           connection.setReadTimeout(15000);
+
+          for (Map.Entry<String, List<String>> entries : connection.getHeaderFields().entrySet()) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+              headers.put(entries.getKey(), String.join(", ", entries.getValue()));
+            }
+          }
 
           int responseCode = connection.getResponseCode();
           if (responseCode == HttpURLConnection.HTTP_OK) {
@@ -958,14 +962,15 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
             fileOutputStream.flush();
             fileOutputStream.close();
           }
+        } else {
+          headers.put("Access-Control-Allow-Origin", "*");
+          headers.put("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT, OPTIONS");
+          headers.put("Access-Control-Allow-Headers", "agent, user-data, Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
+          headers.put("X-Powered-By", "Tiniapp");
         }
 
         if (filePath.exists()) {
           FileInputStream fileInputStream = new FileInputStream(filePath);
-          Map<String, String> headers = new HashMap<String, String>();
-          headers.put("Access-Control-Allow-Origin", "*");
-          headers.put("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT, OPTIONS");
-          headers.put("Access-Control-Allow-Headers", "agent, user-data, Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
           String mimeType = this.getMimeType(filePath.getAbsolutePath());
           return new WebResourceResponse(mimeType, "UTF-8", 200, "OK", headers, fileInputStream);
         }
