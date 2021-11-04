@@ -21,4 +21,8 @@ jobs:
 
       - name: Publish packages
         run: yarn ci:publish
+        env:
+          CI: true
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
   
