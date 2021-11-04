@@ -241,7 +241,8 @@
       @"Access-Control-Allow-Origin": @"*",
       @"Access-Control-Allow-Methods": @"GET, POST, DELETE, PUT, OPTIONS",
       @"Access-Control-Allow-Headers": @"agent, user-data, Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers",
-      @"Content-Type": [mimeType_local stringByAppendingString:@"; charset=UTF-8"]
+      @"Content-Type": [mimeType_local stringByAppendingString:@"; charset=UTF-8"],
+      @"X-Powered-By": @"Tiniapp"
     };
     NSHTTPURLResponse *response = [[NSHTTPURLResponse alloc]
                                    initWithURL:urlSchemeTask.request.URL
