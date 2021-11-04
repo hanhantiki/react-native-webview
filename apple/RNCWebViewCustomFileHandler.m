@@ -130,7 +130,7 @@
           
           NSString *folderHash = [folder MD5Hash];
           NSString *cacheFilePath = [NSString stringWithFormat:@"%@/tiki-miniapp/frameworks/%@%@", documentDir, folderHash, path];
-          bool disableCache = [fragment rangeOfString:@"NOCACHE"].location > 0;
+          bool disableCache = [fragment containsString:@"NOCACHE"];
           [self loadURL:frameworkUrl localFile:cacheFilePath urlSchemeTask: urlSchemeTask disableCache:disableCache];
         }
         return;
