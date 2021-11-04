@@ -1,0 +1,21 @@
+name: Publish RNWebView version
+on: [master]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 15.0.1
+
+      - name: Install packages
+        run: yarn install
+      
+      - name: Build packages
+        run: yarn build
+
+      - name: Publish packages
+        run: yarn ci:publish
+  
