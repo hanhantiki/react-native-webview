@@ -37,11 +37,12 @@
   [self.holdUrlSchemeTasks setObject:@(YES) forKey:urlSchemeTask.description];
   NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
   NSString *documentPath = [paths firstObject];
-  NSURL * url = urlSchemeTask.request.URL;
-  NSString * stringToLoad = url.path;
-  NSString * scheme = url.scheme;
+  NSURL *url = urlSchemeTask.request.URL;
+  NSString *stringToLoad = url.path;
+  NSString *scheme = url.scheme;
+  
   if ([scheme isEqualToString:@"miniapp-resource"]) {
-    NSString * host = url.host;
+    NSString *host = url.host;
     NSString *path = url.path;
     
     // handle bridge request
@@ -110,33 +111,37 @@
       return;
     } else if (path) {
       NSString *documentDir = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) firstObject];
-      NSArray *components = [path pathComponents];
-      NSString *folder = [NSString pathWithComponents:[components subarrayWithRange:(NSRange){ 0, components.count - 1}]];
-      NSString *folderHash = [folder MD5Hash];
-      NSString *fileName = [components lastObject];
+      NSString *requestFileName = [url lastPathComponent];
+      
+      // handle NOCACHE
       NSString *fragment = url.fragment;
       bool disableCache = [fragment containsString:@"NOCACHE"];
       
-      if (([host hasSuffix:@".tikicdn.com"] || [host hasSuffix:@".tiki.vn"] || [host hasSuffix:@".tala.xyz"])) {
-        NSString *cacheFilePath = [NSString stringWithFormat:@"%@/tiki-miniapp/apps/%@/%@", documentDir, folderHash, fileName];
-        [self loadURL:url localFile:cacheFilePath urlSchemeTask:urlSchemeTask disableCache:disableCache];
-        return;
-      } else if ([host isEqualToString:@"framework"]) {
+      if ([host isEqualToString:@"framework"]) {
         // final url is remote url of framework files. URL can be:
         // http://localhost:8080/tf-tiniapp.render.js
         // https://tiniapp-dev.tikicdn.com/tiniapps/framework_files/1.81.18/worker_files/tf-tiniapp.render.js
         // https://tiniapp-dev.tikicdn.com/tiniapps/framework_files/1.81.18/worker_files/tf-tiniapp.render.js#NOCACHE
         NSURL *frameworkUrl;
-        if ([fileName hasPrefix:@"tf-tiniapp.render.js"] || [fileName hasPrefix:@"tf-miniapp.render.js"]) {
+        if ([requestFileName hasPrefix:@"tf-tiniapp.render.js"] || [requestFileName hasPrefix:@"tf-miniapp.render.js"]) {
           frameworkUrl = [[NSURL alloc] initWithString:_appDataSource.renderFrameWorkPath];
-        } else if ([fileName hasPrefix:@"tf-tiniapp.worker.js"] || [fileName hasPrefix:@"tf-miniapp.worker.js"]) {
+        } else if ([requestFileName hasPrefix:@"tf-tiniapp.worker.js"] || [requestFileName hasPrefix:@"tf-miniapp.worker.js"]) {
           frameworkUrl = [[NSURL alloc] initWithString:_appDataSource.workerFrameworkPath];
         }
         
         if (frameworkUrl) {
-          NSString *cacheFilePath = [NSString stringWithFormat:@"%@/tiki-miniapp/frameworks/%@/%@", documentDir, folderHash, fileName];
+          NSString *folderMD5 = [self getFolerMD5: frameworkUrl];
+          NSString *cacheFilePath = [NSString stringWithFormat:@"%@/tiki-miniapp/frameworks/%@/%@", documentDir, folderMD5, requestFileName];
           [self loadURL:frameworkUrl localFile:cacheFilePath urlSchemeTask: urlSchemeTask disableCache:disableCache];
         }
+        return;
+      } else if (([host hasSuffix:@".tikicdn.com"] || [host hasSuffix:@".tiki.vn"] || [host hasSuffix:@".tala.xyz"])) {
+        NSString *requestUrl = url.absoluteString;
+        NSString *replacedStr = [requestUrl stringByReplacingOccurrencesOfString:@"miniapp-resource" withString:@"https"];
+        NSURL *replacedURL = [[NSURL alloc] initWithString:replacedStr];
+        NSString *folderMD5 = [self getFolerMD5: replacedURL];
+        NSString *cacheFilePath = [NSString stringWithFormat:@"%@/tiki-miniapp/apps/%@/%@", documentDir, folderMD5, requestFileName];
+        [self loadURL:replacedURL localFile:cacheFilePath urlSchemeTask:urlSchemeTask disableCache:disableCache];
         return;
       }
     } else if ([stringToLoad hasPrefix:@"/resource"]) {
@@ -199,10 +204,8 @@
     if (![self.holdUrlSchemeTasks objectForKey:urlSchemeTask.description]) {
       return;
     }
-    NSString *requestUrl = url.absoluteString;
-    NSString *replacedStr = [requestUrl stringByReplacingOccurrencesOfString:@"miniapp-resource" withString:@"https"];
-    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:replacedStr]];
   
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
     NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
     configuration.timeoutIntervalForRequest = 15;
     configuration.allowsCellularAccess = YES;
@@ -265,7 +268,14 @@
 
 #pragma mark - private
 
--(NSString *) getMimeType:(NSString *)fileExtension {
+- (NSString *)getFolerMD5:(NSURL *)url {
+  NSString *path = url.path;
+  NSArray *components = [path pathComponents];
+  NSString *folder = [NSString pathWithComponents:[components subarrayWithRange:(NSRange){ 0, components.count - 1}]];
+  return [[folder MD5Hash] lowercaseString];
+}
+
+- (NSString *) getMimeType:(NSString *)fileExtension {
   if (fileExtension && ![fileExtension isEqualToString:@""]) {
     NSString *UTI = (__bridge_transfer NSString *)UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, (__bridge CFStringRef)fileExtension, NULL);
     NSString *contentType = (__bridge_transfer NSString *)UTTypeCopyPreferredTagWithClass((__bridge CFStringRef)UTI, kUTTagClassMIMEType);
@@ -275,7 +285,7 @@
   }
 }
 
--(BOOL) isMediaExtension:(NSString *) pathExtension {
+- (BOOL)isMediaExtension:(NSString *) pathExtension {
   NSArray * mediaExtensions = @[@"m4v", @"mov", @"mp4",
                                 @"aac", @"ac3", @"aiff", @"au", @"flac", @"m4a", @"mp3", @"wav"];
   if ([mediaExtensions containsObject:pathExtension.lowercaseString]) {

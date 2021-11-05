@@ -244,8 +244,9 @@ static NSDictionary* customCertificatesForHost;
   TNAppDataSource *_dataSource = [[TNAppDataSource alloc] initWithAppMeta:_appMeta];
   RNCWebViewCustomFileHandler *schemeHandler = [[RNCWebViewCustomFileHandler alloc] initWithDataSource:_dataSource];
   
-  [wkWebViewConfig setURLSchemeHandler:schemeHandler forURLScheme:@"miniapp-resource"];
-
+  if (@available(iOS 11.0, *)) {
+    [wkWebViewConfig setURLSchemeHandler:schemeHandler forURLScheme:@"miniapp-resource"];
+  }
   wkWebViewConfig.userContentController = [WKUserContentController new];
 
 #if defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 130000 /* iOS 13 */
@@ -565,9 +566,9 @@ static NSDictionary* customCertificatesForHost;
         }
         [_webView loadHTMLString:html baseURL:baseURL];
         return;
-    } 
+    }
     //Add cookie for subsequent resource requests sent by page itself, if cookie was set in headers on WebView
-    NSString *headerCookie = [RCTConvert NSString:_source[@"headers"][@"cookie"]]; 
+    NSString *headerCookie = [RCTConvert NSString:_source[@"headers"][@"cookie"]];
     if(headerCookie) {
       NSDictionary *headers = [NSDictionary dictionaryWithObjectsAndKeys:headerCookie,@"Set-Cookie",nil];
       NSURL *urlString = [NSURL URLWithString:_source[@"uri"]];
