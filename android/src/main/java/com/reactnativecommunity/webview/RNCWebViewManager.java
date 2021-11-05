@@ -505,7 +505,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
       if (source.hasKey("uri")) {
         String origUrl = source.getString("uri");
         String url = origUrl;
-        if ((origUrl.startsWith("https") || origUrl.startsWith("http://localhost")) && origUrl.contains("__customScheme=YES")) {
+        if ((origUrl.startsWith("https") || origUrl.startsWith("http://localhost")) && origUrl.contains("__enableCache=YES")) {
           url = url.replace("https", "miniapp-resource");
           if (origUrl.startsWith("http://localhost")) {
             url = url.replace("http", "miniapp-resource");

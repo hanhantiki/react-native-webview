@@ -1421,7 +1421,7 @@ static NSDictionary* customCertificatesForHost;
   NSURLRequest *request;
   if (self.source[@"uri"]
       && ([self.source[@"uri"] hasPrefix:@"https"] || [self.source[@"uri"] hasPrefix:@"http://localhost"])
-      && [self.source[@"uri"] containsString:@"__customScheme=YES"]
+      && [self.source[@"uri"] containsString:@"__enableCache=YES"]
   ) {
     NSMutableDictionary *source = [self.source mutableCopy];
     source[@"uri"] = [source[@"uri"] stringByReplacingOccurrencesOfString:@"https" withString:@"miniapp-resource"];
