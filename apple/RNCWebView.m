@@ -244,8 +244,9 @@ static NSDictionary* customCertificatesForHost;
   TNAppDataSource *_dataSource = [[TNAppDataSource alloc] initWithAppMeta:_appMeta];
   RNCWebViewCustomFileHandler *schemeHandler = [[RNCWebViewCustomFileHandler alloc] initWithDataSource:_dataSource];
   
-  [wkWebViewConfig setURLSchemeHandler:schemeHandler forURLScheme:@"miniapp-resource"];
-
+  if (@available(iOS 11.0, *)) {
+    [wkWebViewConfig setURLSchemeHandler:schemeHandler forURLScheme:@"miniapp-resource"];
+  }
   wkWebViewConfig.userContentController = [WKUserContentController new];
 
 #if defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 130000 /* iOS 13 */
@@ -565,9 +566,9 @@ static NSDictionary* customCertificatesForHost;
         }
         [_webView loadHTMLString:html baseURL:baseURL];
         return;
-    } 
+    }
     //Add cookie for subsequent resource requests sent by page itself, if cookie was set in headers on WebView
-    NSString *headerCookie = [RCTConvert NSString:_source[@"headers"][@"cookie"]]; 
+    NSString *headerCookie = [RCTConvert NSString:_source[@"headers"][@"cookie"]];
     if(headerCookie) {
       NSDictionary *headers = [NSDictionary dictionaryWithObjectsAndKeys:headerCookie,@"Set-Cookie",nil];
       NSURL *urlString = [NSURL URLWithString:_source[@"uri"]];
@@ -1417,7 +1418,20 @@ static NSDictionary* customCertificatesForHost;
 }
 
 - (NSURLRequest *)requestForSource:(id)json {
-  NSURLRequest *request = [RCTConvert NSURLRequest:self.source];
+  NSURLRequest *request;
+  if (self.source[@"uri"]
+      && ([self.source[@"uri"] hasPrefix:@"https"] || [self.source[@"uri"] hasPrefix:@"http://localhost"])
+      && [self.source[@"uri"] containsString:@"__customScheme=YES"]
+  ) {
+    NSMutableDictionary *source = [self.source mutableCopy];
+    source[@"uri"] = [source[@"uri"] stringByReplacingOccurrencesOfString:@"https" withString:@"miniapp-resource"];
+    if ([self.source[@"uri"] hasPrefix:@"http://localhost"]) {
+      source[@"uri"] = [source[@"uri"] stringByReplacingOccurrencesOfString:@"http" withString:@"miniapp-resource"];
+    }
+    request = [RCTConvert NSURLRequest:source];
+  } else {
+    request = [RCTConvert NSURLRequest:self.source];
+  }
 
   // If sharedCookiesEnabled we automatically add all application cookies to the
   // http request. This is automatically done on iOS 11+ in the WebView constructor.
