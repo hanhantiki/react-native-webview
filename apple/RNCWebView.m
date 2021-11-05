@@ -1419,9 +1419,15 @@ static NSDictionary* customCertificatesForHost;
 
 - (NSURLRequest *)requestForSource:(id)json {
   NSURLRequest *request;
-  if (self.source[@"uri"] && [self.source[@"uri"] hasPrefix:@"https"] && [self.source[@"uri"] containsString:@"__customScheme=YES"]) {
+  if (self.source[@"uri"]
+      && ([self.source[@"uri"] hasPrefix:@"https"] || [self.source[@"uri"] hasPrefix:@"http://localhost"])
+      && [self.source[@"uri"] containsString:@"__customScheme=YES"]
+  ) {
     NSMutableDictionary *source = [self.source mutableCopy];
     source[@"uri"] = [source[@"uri"] stringByReplacingOccurrencesOfString:@"https" withString:@"miniapp-resource"];
+    if ([self.source[@"uri"] hasPrefix:@"http://localhost"]) {
+      source[@"uri"] = [source[@"uri"] stringByReplacingOccurrencesOfString:@"http" withString:@"miniapp-resource"];
+    }
     request = [RCTConvert NSURLRequest:source];
   } else {
     request = [RCTConvert NSURLRequest:self.source];

@@ -115,7 +115,7 @@
       
       // handle NOCACHE
       NSString *fragment = url.fragment;
-      bool disableCache = [fragment containsString:@"NOCACHE"];
+      bool disableCache = [fragment containsString:@"NOCACHE"] || [url.query containsString:@"__nocache=YES"];
       
       if ([host isEqualToString:@"framework"]) {
         // final url is remote url of framework files. URL can be:
@@ -135,9 +135,12 @@
           [self loadURL:frameworkUrl localFile:cacheFilePath urlSchemeTask: urlSchemeTask disableCache:disableCache];
         }
         return;
-      } else if (([host hasSuffix:@".tikicdn.com"] || [host hasSuffix:@".tiki.vn"] || [host hasSuffix:@".tala.xyz"])) {
+      } else if (([host hasSuffix:@".tikicdn.com"] || [host hasSuffix:@".tiki.vn"] || [host hasSuffix:@".tala.xyz"]) || [host hasPrefix:@"localhost"]) {
         NSString *requestUrl = url.absoluteString;
         NSString *replacedStr = [requestUrl stringByReplacingOccurrencesOfString:@"miniapp-resource" withString:@"https"];
+        if ([host hasPrefix:@"localhost"]) {
+          replacedStr = [requestUrl stringByReplacingOccurrencesOfString:@"miniapp-resource" withString:@"http"];
+        }
         NSURL *replacedURL = [[NSURL alloc] initWithString:replacedStr];
         NSString *folderMD5 = [self getFolerMD5: replacedURL];
         NSString *cacheFilePath = [NSString stringWithFormat:@"%@/tiki-miniapp/apps/%@/%@", documentDir, folderMD5, requestFileName];

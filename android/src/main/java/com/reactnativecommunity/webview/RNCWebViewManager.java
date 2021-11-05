@@ -504,8 +504,13 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
       }
       if (source.hasKey("uri")) {
         String origUrl = source.getString("uri");
-        String replacedUrl = origUrl.replace("https", "miniapp-resource");
-        String url = replacedUrl;
+        String url = origUrl;
+        if ((origUrl.startsWith("https") || origUrl.startsWith("http://localhost")) && origUrl.contains("__customScheme=YES")) {
+          url = url.replace("https", "miniapp-resource");
+          if (origUrl.startsWith("http://localhost")) {
+            url = url.replace("http", "miniapp-resource");
+          }
+        }
         String previousUrl = view.getUrl();
 
         if (previousUrl != null && previousUrl.equals(url)) {
@@ -906,6 +911,11 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
             if (fragment != null) {
               disableCache = fragment.contains("NOCACHE");
             }
+            String query = originUrl.getQuery();
+            if (disableCache == false && query != null) {
+              disableCache = query.contains("__nocache=YES");
+            }
+
             String requestFileName = originUrl.getLastPathSegment();
 
             if (host.equals("framework")) {
@@ -922,8 +932,13 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
                   return response;
                 }
               }
-            } else if (host.endsWith(".tikicdn.com") || host.endsWith(".tiki.vn") || host.endsWith(".tala.xyz")) {
-              String replacedUrl = url.replace("miniapp-resource", "https");
+            } else if (host.endsWith(".tikicdn.com") || host.endsWith(".tiki.vn") || host.endsWith(".tala.xyz") || host.startsWith("localhost")) {
+              String replacedUrl = url;
+              if (host.startsWith("localhost")) {
+                replacedUrl = replacedUrl.replace("miniapp-resource", "http");
+              } else {
+                replacedUrl = replacedUrl.replace("miniapp-resource", "https");
+              }
               URL replacedURL = new URL(replacedUrl);
               File filePath = new File(cacheDir, "tiki-miniapp/apps/" + this.getFolderMD5(replacedURL) + "/" + requestFileName);
               WebResourceResponse response = this.loadURL(replacedURL, filePath, disableCache);
