@@ -130,6 +130,10 @@
         }
         
         if (frameworkUrl) {
+          if ([frameworkUrl.host hasPrefix:@"localhost"]) {
+            // force disable cache on localhost
+            disableCache = YES;
+          }
           NSString *folderMD5 = [self getFolerMD5: frameworkUrl];
           NSString *cacheFilePath = [NSString stringWithFormat:@"%@/tiki-miniapp/frameworks/%@/%@", documentDir, folderMD5, requestFileName];
           [self loadURL:frameworkUrl localFile:cacheFilePath urlSchemeTask: urlSchemeTask disableCache:disableCache];
@@ -140,6 +144,8 @@
         NSString *replacedStr = [requestUrl stringByReplacingOccurrencesOfString:@"miniapp-resource" withString:@"https"];
         if ([host hasPrefix:@"localhost"]) {
           replacedStr = [requestUrl stringByReplacingOccurrencesOfString:@"miniapp-resource" withString:@"http"];
+          // force disable cache on localhost
+          disableCache = YES;
         }
         NSURL *replacedURL = [[NSURL alloc] initWithString:replacedStr];
         NSString *folderMD5 = [self getFolerMD5: replacedURL];

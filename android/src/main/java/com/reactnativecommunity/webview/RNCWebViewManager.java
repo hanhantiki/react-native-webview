@@ -927,6 +927,10 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
               }
               File filePath = new File(cacheDir, "tiki-miniapp/frameworks/" + this.getFolderMD5(frameworkURL) + "/" + requestFileName);
               if (frameworkURL != null) {
+                // disable cache on localhost
+                if (frameworkURL.getHost().startsWith("localhost")) {
+                  disableCache = true;
+                }
                 WebResourceResponse response = this.loadURL(frameworkURL, filePath, disableCache);
                 if (response != null) {
                   return response;
@@ -940,6 +944,9 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
                 replacedUrl = replacedUrl.replace("miniapp-resource", "https");
               }
               URL replacedURL = new URL(replacedUrl);
+              if (replacedURL.getHost().startsWith("localhost")) {
+                disableCache = true;
+              }
               File filePath = new File(cacheDir, "tiki-miniapp/apps/" + this.getFolderMD5(replacedURL) + "/" + requestFileName);
               WebResourceResponse response = this.loadURL(replacedURL, filePath, disableCache);
               if (response != null) {
