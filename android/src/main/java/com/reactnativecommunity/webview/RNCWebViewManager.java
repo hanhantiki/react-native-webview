@@ -855,10 +855,6 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
     public WebResourceResponse shouldInterceptRequest(final WebView view, String url) {
-      if (url.startsWith("miniapp-resource:///")) {
-        url = url.replace("miniapp-resource:////", "miniapp-resource://");
-        url = url.replace("miniapp-resource:///", "miniapp-resource://");
-      }
       Uri originUrl = Uri.parse(url);
       String scheme = originUrl.getScheme();
       String host = originUrl.getHost();
