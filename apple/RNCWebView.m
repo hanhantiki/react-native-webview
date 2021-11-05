@@ -1417,7 +1417,14 @@ static NSDictionary* customCertificatesForHost;
 }
 
 - (NSURLRequest *)requestForSource:(id)json {
-  NSURLRequest *request = [RCTConvert NSURLRequest:self.source];
+  NSURLRequest *request;
+  if (self.source[@"uri"] && [self.source[@"uri"] hasPrefix:@"https"] && [self.source[@"uri"] containsString:@"__customScheme=YES"]) {
+    NSMutableDictionary *source = [self.source mutableCopy];
+    source[@"uri"] = [source[@"uri"] stringByReplacingOccurrencesOfString:@"https" withString:@"miniapp-resource"];
+    request = [RCTConvert NSURLRequest:source];
+  } else {
+    request = [RCTConvert NSURLRequest:self.source];
+  }
 
   // If sharedCookiesEnabled we automatically add all application cookies to the
   // http request. This is automatically done on iOS 11+ in the WebView constructor.

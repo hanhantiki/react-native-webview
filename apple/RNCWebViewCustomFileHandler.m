@@ -42,6 +42,7 @@
   NSString * scheme = url.scheme;
   if ([scheme isEqualToString:@"miniapp-resource"]) {
     NSString * host = url.host;
+    NSString *path = url.path;
     
     // handle bridge request
     if ([host isEqualToString:@"tinibridge"]) {
@@ -107,40 +108,41 @@
       [urlSchemeTask didReceiveData:data];
       [urlSchemeTask didFinish];
       return;
-    } else if ([host isEqualToString:@"framework"]) {
-      NSString *path = url.path;
-      if (path) {
+    } else if (path) {
+      NSString *documentDir = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) firstObject];
+      NSArray *components = [path pathComponents];
+      NSString *folder = [NSString pathWithComponents:[components subarrayWithRange:(NSRange){ 0, components.count - 1}]];
+      NSString *folderHash = [folder MD5Hash];
+      NSString *fileName = [components lastObject];
+      NSString *fragment = url.fragment;
+      bool disableCache = [fragment containsString:@"NOCACHE"];
+      
+      if (([host hasSuffix:@".tikicdn.com"] || [host hasSuffix:@".tiki.vn"] || [host hasSuffix:@".tala.xyz"])) {
+        NSString *cacheFilePath = [NSString stringWithFormat:@"%@/tiki-miniapp/apps/%@/%@", documentDir, folderHash, fileName];
+        [self loadURL:url localFile:cacheFilePath urlSchemeTask:urlSchemeTask disableCache:disableCache];
+        return;
+      } else if ([host isEqualToString:@"framework"]) {
         // final url is remote url of framework files. URL can be:
         // http://localhost:8080/tf-tiniapp.render.js
         // https://tiniapp-dev.tikicdn.com/tiniapps/framework_files/1.81.18/worker_files/tf-tiniapp.render.js
         // https://tiniapp-dev.tikicdn.com/tiniapps/framework_files/1.81.18/worker_files/tf-tiniapp.render.js#NOCACHE
         NSURL *frameworkUrl;
-        NSArray *components = [path pathComponents];
-        NSString *folder = [NSString pathWithComponents:[components subarrayWithRange:(NSRange){ 0, components.count - 1}]];
-        NSString *fileName = [components lastObject];
-        NSString *fragment = url.fragment;
         if ([fileName hasPrefix:@"tf-tiniapp.render.js"] || [fileName hasPrefix:@"tf-miniapp.render.js"]) {
           frameworkUrl = [[NSURL alloc] initWithString:_appDataSource.renderFrameWorkPath];
         } else if ([fileName hasPrefix:@"tf-tiniapp.worker.js"] || [fileName hasPrefix:@"tf-miniapp.worker.js"]) {
           frameworkUrl = [[NSURL alloc] initWithString:_appDataSource.workerFrameworkPath];
         }
         
-        if (frameworkUrl) { 
-          NSString *documentDir = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) firstObject];
-          
-          NSString *folderHash = [folder MD5Hash];
-          NSString *cacheFilePath = [NSString stringWithFormat:@"%@/tiki-miniapp/frameworks/%@%@", documentDir, folderHash, path];
-          bool disableCache = [fragment containsString:@"NOCACHE"];
+        if (frameworkUrl) {
+          NSString *cacheFilePath = [NSString stringWithFormat:@"%@/tiki-miniapp/frameworks/%@/%@", documentDir, folderHash, fileName];
           [self loadURL:frameworkUrl localFile:cacheFilePath urlSchemeTask: urlSchemeTask disableCache:disableCache];
         }
         return;
       }
+    } else if ([stringToLoad hasPrefix:@"/resource"]) {
+      documentPath = [stringToLoad stringByReplacingOccurrencesOfString:@"/resource" withString:@""];
     } else {
-      if ([stringToLoad hasPrefix:@"/resource"]) {
-        documentPath = [stringToLoad stringByReplacingOccurrencesOfString:@"/resource" withString:@""];
-      } else {
-        documentPath = stringToLoad;
-      }
+      documentPath = stringToLoad;
     }
   }
   
@@ -178,13 +180,13 @@
 }
 
 - (void)loadURL:(NSURL *)url localFile:(NSString *)filePath urlSchemeTask:(id <WKURLSchemeTask>)urlSchemeTask disableCache:(bool)disableCache API_AVAILABLE(ios(11.0)){
-    if (filePath.length == 0 || !urlSchemeTask) {
+    if (!urlSchemeTask) {
       return;
     }
   
-    if (![[NSFileManager defaultManager] fileExistsAtPath:filePath] || disableCache) {
+    if (disableCache || ![[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
       [self requestRemoteURL:url urlSchemeTask:urlSchemeTask filePath:filePath];
-    } else {
+    } else if (filePath) {
       NSData *data = [NSData dataWithContentsOfFile:filePath options:NSDataReadingMappedIfSafe error:nil];
       if (!data) {
         return;
@@ -197,8 +199,10 @@
     if (![self.holdUrlSchemeTasks objectForKey:urlSchemeTask.description]) {
       return;
     }
-
-    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
+    NSString *requestUrl = url.absoluteString;
+    NSString *replacedStr = [requestUrl stringByReplacingOccurrencesOfString:@"miniapp-resource" withString:@"https"];
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:replacedStr]];
+  
     NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
     configuration.timeoutIntervalForRequest = 15;
     configuration.allowsCellularAccess = YES;
@@ -212,7 +216,7 @@
         // save content to disk
         if (error) {
             [urlSchemeTask didFailWithError:error];
-        } else {
+        } else if (filePath != nil) {
             NSArray *components = [filePath pathComponents];
             NSString *folder = [NSString pathWithComponents:[components subarrayWithRange:(NSRange){ 0, components.count - 1}]];
             // if the directory does not exist, create it...
@@ -220,6 +224,8 @@
                 NSLog(@"createDirectoryAtPath failed %@", error);
             }
             [data writeToFile:filePath atomically:YES];
+            [urlSchemeTask didFinish];
+        } else {
             [urlSchemeTask didFinish];
         }
     }];
