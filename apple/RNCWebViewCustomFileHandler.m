@@ -228,7 +228,13 @@
         // save content to disk
         if (error) {
             [urlSchemeTask didFailWithError:error];
-        } else if (filePath != nil) {
+        } else {
+          @try {
+            [urlSchemeTask didFinish];
+          } @catch (NSException *exception) {
+          }
+          
+          if (filePath != nil) {
             NSArray *components = [filePath pathComponents];
             NSString *folder = [NSString pathWithComponents:[components subarrayWithRange:(NSRange){ 0, components.count - 1}]];
             // if the directory does not exist, create it...
@@ -236,9 +242,7 @@
                 NSLog(@"createDirectoryAtPath failed %@", error);
             }
             [data writeToFile:filePath atomically:YES];
-            [urlSchemeTask didFinish];
-        } else {
-            [urlSchemeTask didFinish];
+          }
         }
     }];
 
