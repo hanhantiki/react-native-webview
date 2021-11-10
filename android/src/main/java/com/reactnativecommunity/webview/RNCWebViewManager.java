@@ -902,15 +902,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
             ContextWrapper cw = new ContextWrapper(context);
             File cacheDir = cw.getCacheDir();
 
-            boolean disableCache = false;
-            String fragment = originUrl.getFragment();
-            if (fragment != null) {
-              disableCache = fragment.contains("NOCACHE");
-            }
-            String query = originUrl.getQuery();
-            if (disableCache == false && query != null) {
-              disableCache = query.contains("__nocache=YES");
-            }
+            int expiredDay = this.appDatSource.cacheExpiredDay();
 
             String requestFileName = originUrl.getLastPathSegment();
 
@@ -923,11 +915,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
               }
               File filePath = new File(cacheDir, "tiki-miniapp/frameworks/" + this.getFolderMD5(frameworkURL) + "/" + requestFileName);
               if (frameworkURL != null) {
-                // disable cache on localhost
-                if (frameworkURL.getHost().startsWith("localhost")) {
-                  disableCache = true;
-                }
-                WebResourceResponse response = this.loadURL(frameworkURL, filePath, disableCache);
+                WebResourceResponse response = this.loadURL(frameworkURL, filePath, expiredDay);
                 if (response != null) {
                   return response;
                 }
@@ -940,11 +928,15 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
                 replacedUrl = replacedUrl.replace("miniapp-resource", "https");
               }
               URL replacedURL = new URL(replacedUrl);
-              if (replacedURL.getHost().startsWith("localhost")) {
-                disableCache = true;
+              File cacheFilePath = new File(cacheDir, "tiki-miniapp/apps/" + this.getFolderMD5(replacedURL) + "/" + requestFileName);
+              if (requestFileName.endsWith("index.prod.html")) {
+                File snapshotFile = new File(cacheDir, "tiki-miniapp/" + this.appDatSource.indexHtmlSnapshotFile());
+                if (cacheFilePath.exists() && snapshotFile.exists()) {
+                  cacheFilePath = snapshotFile;
+                  expiredDay = this.appDatSource.snapshotExpiredDay();
+                }
               }
-              File filePath = new File(cacheDir, "tiki-miniapp/apps/" + this.getFolderMD5(replacedURL) + "/" + requestFileName);
-              WebResourceResponse response = this.loadURL(replacedURL, filePath, disableCache);
+              WebResourceResponse response = this.loadURL(replacedURL, cacheFilePath, expiredDay);
               if (response != null) {
                 return response;
               }
@@ -968,19 +960,21 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private WebResourceResponse loadURL(URL url, File filePath, boolean disableCache)  {
+    private WebResourceResponse loadURL(URL url, File filePath, int expiredDay)  {
       HttpURLConnection connection = null;
       InputStream inputStream = null;
       try {
         Map<String, String> headers = new HashMap<>();
 
-        if (!filePath.exists() || disableCache) {
+        if (filePath.exists() && !this.deleteFileIfExpired(filePath, expiredDay)) {
+          headers.put("Access-Control-Allow-Origin", "*");
+          headers.put("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT, OPTIONS");
+          headers.put("Access-Control-Allow-Headers", "agent, user-data, Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
+          headers.put("X-Powered-By", "Tiniapp");
+        } else {
           // create folder if it does not exists
           filePath.getParentFile().mkdirs();
           connection = (HttpURLConnection) url.openConnection();
-          // use cache in normal request, but when has #NOCACHE option
-          // we prefer over network
-          connection.setUseCaches(!disableCache);
           connection.setConnectTimeout(15000);
           connection.setReadTimeout(15000);
 
@@ -1005,11 +999,6 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
             fileOutputStream.flush();
             fileOutputStream.close();
           }
-        } else {
-          headers.put("Access-Control-Allow-Origin", "*");
-          headers.put("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT, OPTIONS");
-          headers.put("Access-Control-Allow-Headers", "agent, user-data, Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
-          headers.put("X-Powered-By", "Tiniapp");
         }
 
         if (filePath.exists()) {
@@ -1031,6 +1020,18 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
         }
       }
       return null;
+    }
+
+    private boolean deleteFileIfExpired(File file, int expiredDay) {
+      if (file.exists()) {
+        long lastModified = file.lastModified() / 1000;
+        long now = System.currentTimeMillis() / 1000;
+        if (now - lastModified > expiredDay * 864000) {
+          file.delete();
+          return true;
+        }
+      }
+      return false;
     }
 
     private String getMimeType(String url) {

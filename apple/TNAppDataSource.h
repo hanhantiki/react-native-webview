@@ -15,6 +15,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (readonly) NSString *renderFrameWorkPath;
 @property (readonly) NSString *workerFrameworkPath;
+@property (readonly) NSString * _Nullable indexHtmlSnapshotFile;
+@property (readonly) int snapshotExpiredDay;
+@property (readonly) int cacheExpiredDay;
 
 @end
 

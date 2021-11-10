@@ -113,9 +113,7 @@
       NSString *documentDir = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) firstObject];
       NSString *requestFileName = [url lastPathComponent];
       
-      // handle NOCACHE
-      NSString *fragment = url.fragment;
-      bool disableCache = [fragment containsString:@"NOCACHE"] || [url.query containsString:@"__nocache=YES"];
+      int expiredDay = _appDataSource.cacheExpiredDay;
       
       if ([host isEqualToString:@"framework"]) {
         // final url is remote url of framework files. URL can be:
@@ -124,33 +122,47 @@
         // https://tiniapp-dev.tikicdn.com/tiniapps/framework_files/1.81.18/worker_files/tf-tiniapp.render.js#NOCACHE
         NSURL *frameworkUrl;
         if ([requestFileName hasPrefix:@"tf-tiniapp.render.js"] || [requestFileName hasPrefix:@"tf-miniapp.render.js"]) {
-          frameworkUrl = [[NSURL alloc] initWithString:_appDataSource.renderFrameWorkPath];
+          if (_appDataSource.renderFrameWorkPath) {
+            frameworkUrl = [[NSURL alloc] initWithString:_appDataSource.renderFrameWorkPath];
+          }
         } else if ([requestFileName hasPrefix:@"tf-tiniapp.worker.js"] || [requestFileName hasPrefix:@"tf-miniapp.worker.js"]) {
-          frameworkUrl = [[NSURL alloc] initWithString:_appDataSource.workerFrameworkPath];
+          if (_appDataSource.workerFrameworkPath) {
+            frameworkUrl = [[NSURL alloc] initWithString:_appDataSource.workerFrameworkPath];
+          }
         }
         
         if (frameworkUrl) {
-          if ([frameworkUrl.host hasPrefix:@"localhost"]) {
-            // force disable cache on localhost
-            disableCache = YES;
-          }
           NSString *folderMD5 = [self getFolerMD5: frameworkUrl];
           NSString *cacheFilePath = [NSString stringWithFormat:@"%@/tiki-miniapp/frameworks/%@/%@", documentDir, folderMD5, requestFileName];
-          [self loadURL:frameworkUrl localFile:cacheFilePath urlSchemeTask: urlSchemeTask disableCache:disableCache];
+
+          [self loadURL:frameworkUrl localFile:cacheFilePath urlSchemeTask: urlSchemeTask expiredDay:expiredDay];
         }
         return;
       } else if (([host hasSuffix:@".tikicdn.com"] || [host hasSuffix:@".tiki.vn"] || [host hasSuffix:@".tala.xyz"]) || [host hasPrefix:@"localhost"]) {
+        // handle entry file which may use snapshot
         NSString *requestUrl = url.absoluteString;
-        NSString *replacedStr = [requestUrl stringByReplacingOccurrencesOfString:@"miniapp-resource" withString:@"https"];
+        NSString *replacedUrl;
         if ([host hasPrefix:@"localhost"]) {
-          replacedStr = [requestUrl stringByReplacingOccurrencesOfString:@"miniapp-resource" withString:@"http"];
-          // force disable cache on localhost
-          disableCache = YES;
+          replacedUrl = [requestUrl stringByReplacingOccurrencesOfString:@"miniapp-resource" withString:@"http"];
+        } else {
+          replacedUrl = [requestUrl stringByReplacingOccurrencesOfString:@"miniapp-resource" withString:@"https"];
         }
-        NSURL *replacedURL = [[NSURL alloc] initWithString:replacedStr];
+        
+        NSURL *replacedURL = [[NSURL alloc] initWithString:replacedUrl];
         NSString *folderMD5 = [self getFolerMD5: replacedURL];
         NSString *cacheFilePath = [NSString stringWithFormat:@"%@/tiki-miniapp/apps/%@/%@", documentDir, folderMD5, requestFileName];
-        [self loadURL:replacedURL localFile:cacheFilePath urlSchemeTask:urlSchemeTask disableCache:disableCache];
+        
+        if ([requestFileName hasSuffix:@"index.prod.html"]) {
+          NSString *snapshotPath = [NSString stringWithFormat:@"%@/tiki-miniapp/%@", documentDir, _appDataSource.indexHtmlSnapshotFile];
+          // only use snapshot when has disk cache
+          if ([[NSFileManager defaultManager] fileExistsAtPath:cacheFilePath]
+              && [[NSFileManager defaultManager] fileExistsAtPath:snapshotPath]) {
+            cacheFilePath = snapshotPath;
+            expiredDay = _appDataSource.snapshotExpiredDay;
+          }
+        }
+        
+        [self loadURL:replacedURL localFile:cacheFilePath urlSchemeTask:urlSchemeTask expiredDay:expiredDay];
         return;
       }
     } else if ([stringToLoad hasPrefix:@"/resource"]) {
@@ -193,19 +205,23 @@
   [self.holdUrlSchemeTasks setObject:@(NO) forKey:urlSchemeTask.description];
 }
 
-- (void)loadURL:(NSURL *)url localFile:(NSString *)filePath urlSchemeTask:(id <WKURLSchemeTask>)urlSchemeTask disableCache:(bool)disableCache API_AVAILABLE(ios(11.0)){
+- (void)loadURL:(NSURL *)url localFile:(NSString *)filePath urlSchemeTask:(id <WKURLSchemeTask>)urlSchemeTask expiredDay:(int)expiredDay API_AVAILABLE(ios(11.0)){
     if (!urlSchemeTask) {
       return;
     }
-  
-    if (disableCache || ![[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
-      [self requestRemoteURL:url urlSchemeTask:urlSchemeTask filePath:filePath];
-    } else if (filePath) {
+    // use cache when:
+    // - not expired
+    // - no #NOCACHE
+    // - cache file exists
+    if (filePath && [[NSFileManager defaultManager] fileExistsAtPath:filePath]
+        && ![self deleteFileIfExpired:filePath expiredDay:expiredDay]) {
       NSData *data = [NSData dataWithContentsOfFile:filePath options:NSDataReadingMappedIfSafe error:nil];
       if (!data) {
         return;
       }
       [self resendRequestWithUrlSchemeTask:urlSchemeTask mimeType:[self getMimeTypeWithFilePath:filePath] requestData:data];
+    } else {
+      [self requestRemoteURL:url urlSchemeTask:urlSchemeTask filePath:filePath];
     }
 }
 
@@ -248,6 +264,22 @@
 
     [dataTask resume];
     [session finishTasksAndInvalidate];
+}
+
+- (BOOL)deleteFileIfExpired:(NSString *)filePath expiredDay:(int)expiredDay {
+  NSFileManager *fileManager = [NSFileManager defaultManager];
+  if ([fileManager fileExistsAtPath:filePath]) {
+    NSDictionary *fileStats = [fileManager attributesOfItemAtPath:filePath error:nil];
+    NSDate *latestUpdated = [fileStats objectForKey:NSFileModificationDate];
+    NSTimeInterval latestUpdatedTimestamp = [latestUpdated timeIntervalSince1970];
+    NSTimeInterval nowTimpestamp = [[[NSDate alloc] init] timeIntervalSince1970];
+    
+    if (nowTimpestamp - latestUpdatedTimestamp > expiredDay * 86400) {
+      [fileManager removeItemAtPath:filePath error:nil];
+      return true;
+    }
+  }
+  return false;
 }
 
 - (void)resendRequestWithUrlSchemeTask:(id <WKURLSchemeTask>)urlSchemeTask
