@@ -43,14 +43,14 @@
 }
 
 - (int)snapshotExpiredDay {
-  if (_appMeta[@"snapshotExpiredDay"]) {
+  if (_appMeta[@"snapshotExpiredDay"] && [_appMeta[@"snapshotExpiredDay"] intValue]) {
     return [_appMeta[@"snapshotExpiredDay"] intValue];
   }
   return 0;
 }
 
 - (int)cacheExpiredDay {
-  if (_appMeta[@"cacheExpiredDay"]) {
+  if (_appMeta[@"cacheExpiredDay"] && [_appMeta[@"cacheExpiredDay"] intValue]) {
     return [_appMeta[@"cacheExpiredDay"] intValue];
   }
   return 0;

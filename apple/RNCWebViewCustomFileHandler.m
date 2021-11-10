@@ -152,7 +152,7 @@
         NSString *folderMD5 = [self getFolerMD5: replacedURL];
         NSString *cacheFilePath = [NSString stringWithFormat:@"%@/tiki-miniapp/apps/%@/%@", documentDir, folderMD5, requestFileName];
         
-        if ([requestFileName hasSuffix:@"index.prod.html"]) {
+        if ([requestFileName hasSuffix:@"index.prod.html"] && _appDataSource.indexHtmlSnapshotFile) {
           NSString *snapshotPath = [NSString stringWithFormat:@"%@/tiki-miniapp/%@", documentDir, _appDataSource.indexHtmlSnapshotFile];
           // only use snapshot when has disk cache
           if ([[NSFileManager defaultManager] fileExistsAtPath:cacheFilePath]
