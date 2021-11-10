@@ -15,22 +15,44 @@ public class TNAppDatSource {
   }
 
   public String getRenderFrameWorkPath() {
-    return this.appMeta.getString("renderFrameWorkPath");
+    if (this.appMeta.hasKey("renderFrameWorkPath")) {
+      return this.appMeta.getString("renderFrameWorkPath");
+    }
+    return null;
   }
 
   public String getWorkerFrameworkPath() {
-    return this.appMeta.getString("workerFrameWorkPath");
+    if (this.appMeta.hasKey("workerFrameWorkPath")) {
+      return this.appMeta.getString("workerFrameWorkPath");
+    }
+    return null;
   }
 
   public int snapshotExpiredDay() {
-    return this.appMeta.getInt("snapshotExpiredDay");
+    if (this.appMeta.hasKey("snapshotExpiredDay")) {
+      return this.appMeta.getInt("snapshotExpiredDay");
+    }
+    return 0;
   }
 
   public int cacheExpiredDay() {
-    return this.appMeta.getInt("cacheExpiredDay");
+    if (this.appMeta.hasKey("cacheExpiredDay")) {
+      return this.appMeta.getInt("cacheExpiredDay");
+    }
+    return 0;
+  }
+
+  public ReadableMap getLaunchParams() {
+    if (this.appMeta.hasKey("launchParams")) {
+      return this.appMeta.getMap("launchParams");
+    }
+    return null;
   }
 
   public String indexHtmlSnapshotFile() {
-    return this.appMeta.getString("indexHtmlSnapshotFile");
+    if (this.appMeta.hasKey("indexHtmlSnapshotFile")) {
+      return this.appMeta.getString("indexHtmlSnapshotFile");
+    }
+    return null;
   }
 }

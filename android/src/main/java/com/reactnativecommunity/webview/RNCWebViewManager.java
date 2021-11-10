@@ -929,7 +929,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
               }
               URL replacedURL = new URL(replacedUrl);
               File cacheFilePath = new File(cacheDir, "tiki-miniapp/apps/" + this.getFolderMD5(replacedURL) + "/" + requestFileName);
-              if (requestFileName.endsWith("index.prod.html")) {
+              if (requestFileName.endsWith("index.prod.html") && this.appDatSource.indexHtmlSnapshotFile() != null) {
                 File snapshotFile = new File(cacheDir, "tiki-miniapp/" + this.appDatSource.indexHtmlSnapshotFile());
                 if (cacheFilePath.exists() && snapshotFile.exists()) {
                   cacheFilePath = snapshotFile;
