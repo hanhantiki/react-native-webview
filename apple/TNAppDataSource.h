@@ -13,8 +13,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (instancetype)initWithAppMeta:(NSDictionary *)appMeta;
 
-@property (readonly) NSString *renderFrameWorkPath;
-@property (readonly) NSString *workerFrameworkPath;
+@property (readonly) NSString * _Nullable renderFrameWorkPath;
+@property (readonly) NSString * _Nullable workerFrameWorkPath;
+@property (readonly) NSString * _Nullable stylesFrameWorkPath;
 @property (readonly) NSString * _Nullable indexHtmlSnapshotFile;
 @property (readonly) int snapshotExpiredDay;
 @property (readonly) int cacheExpiredDay;

@@ -21,16 +21,23 @@
   return self;
 }
 
-- (NSString *)workerFrameworkPath {
+- (NSString * _Nullable)workerFrameWorkPath {
   if (_appMeta[@"workerFrameWorkPath"]) {
     return _appMeta[@"workerFrameWorkPath"];
   }
   return nil;
 }
 
-- (NSString *)renderFrameWorkPath {
+- (NSString * _Nullable)renderFrameWorkPath {
   if (_appMeta[@"renderFrameWorkPath"]) {
     return _appMeta[@"renderFrameWorkPath"];
+  }
+  return nil;
+}
+
+- (NSString * _Nullable)stylesFrameWorkPath {
+  if (_appMeta[@"stylesFrameWorkPath"]) {
+    return _appMeta[@"stylesFrameWorkPath"];
   }
   return nil;
 }

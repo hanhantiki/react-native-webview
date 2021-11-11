@@ -126,8 +126,12 @@
             frameworkUrl = [[NSURL alloc] initWithString:_appDataSource.renderFrameWorkPath];
           }
         } else if ([requestFileName hasPrefix:@"tf-tiniapp.worker.js"] || [requestFileName hasPrefix:@"tf-miniapp.worker.js"]) {
-          if (_appDataSource.workerFrameworkPath) {
-            frameworkUrl = [[NSURL alloc] initWithString:_appDataSource.workerFrameworkPath];
+          if (_appDataSource.workerFrameWorkPath) {
+            frameworkUrl = [[NSURL alloc] initWithString:_appDataSource.workerFrameWorkPath];
+          }
+        } else if ([requestFileName hasPrefix:@"tf-tiniapp.css"]) {
+          if (_appDataSource.stylesFrameWorkPath) {
+            frameworkUrl = [[NSURL alloc] initWithString:_appDataSource.stylesFrameWorkPath];
           }
         }
         
@@ -152,7 +156,7 @@
         NSString *folderMD5 = [self getFolerMD5: replacedURL];
         NSString *cacheFilePath = [NSString stringWithFormat:@"%@/tiki-miniapp/apps/%@/%@", documentDir, folderMD5, requestFileName];
         
-        if ([requestFileName hasSuffix:@"index.prod.html"] && _appDataSource.indexHtmlSnapshotFile) {
+        if ([requestFileName hasSuffix:@"index.prod.html"]) {
           NSString *snapshotPath = [NSString stringWithFormat:@"%@/tiki-miniapp/%@", documentDir, _appDataSource.indexHtmlSnapshotFile];
           // only use snapshot when has disk cache
           if ([[NSFileManager defaultManager] fileExistsAtPath:cacheFilePath]
