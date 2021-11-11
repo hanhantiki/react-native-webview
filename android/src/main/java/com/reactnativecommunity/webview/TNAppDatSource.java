@@ -28,6 +28,13 @@ public class TNAppDatSource {
     return null;
   }
 
+  public String getStylesFrameworkPath() {
+    if (this.appMeta.hasKey("stylesFrameWorkPath")) {
+      return this.appMeta.getString("stylesFrameWorkPath");
+    }
+    return null;
+  }
+
   public int snapshotExpiredDay() {
     if (this.appMeta.hasKey("snapshotExpiredDay")) {
       return this.appMeta.getInt("snapshotExpiredDay");

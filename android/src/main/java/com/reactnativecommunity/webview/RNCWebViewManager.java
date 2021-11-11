@@ -909,9 +909,17 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
             if (host.equals("framework")) {
               URL frameworkURL = null;
               if (requestFileName.startsWith("tf-tiniapp.render.js") || requestFileName.startsWith("tf-miniapp.render.js")) {
-                frameworkURL = new URL(this.appDatSource.getRenderFrameWorkPath());
+                if (this.appDatSource.getRenderFrameWorkPath() != null) {
+                  frameworkURL = new URL(this.appDatSource.getRenderFrameWorkPath());
+                }
               } else if (requestFileName.startsWith("tf-tiniapp.worker.js") || requestFileName.startsWith("tf-miniapp.worker.js")) {
-                frameworkURL = new URL(this.appDatSource.getWorkerFrameworkPath());
+                if (this.appDatSource.getWorkerFrameworkPath() != null) {
+                  frameworkURL = new URL(this.appDatSource.getWorkerFrameworkPath());
+                }
+              } else if (requestFileName.startsWith("tf-tiniapp.css")) {
+                if (this.appDatSource.getStylesFrameworkPath() != null) {
+                  frameworkURL = new URL(this.appDatSource.getStylesFrameworkPath());
+                }
               }
               File filePath = new File(cacheDir, "tiki-miniapp/frameworks/" + this.getFolderMD5(frameworkURL) + "/" + requestFileName);
               if (frameworkURL != null) {
