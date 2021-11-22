@@ -949,7 +949,6 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
                 return response;
               }
             } else {
-              String path = originUrl.getPath();
               try {
                 File file = new File(path);
                 if (file.exists()) {
@@ -960,6 +959,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
               } catch (Exception e) {
                 return super.shouldInterceptRequest(view, url);
               }
+            }
           }
         } catch (Exception e) {
           return super.shouldInterceptRequest(view, url);
