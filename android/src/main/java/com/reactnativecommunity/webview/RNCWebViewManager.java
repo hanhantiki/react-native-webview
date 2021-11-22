@@ -948,7 +948,18 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
               if (response != null) {
                 return response;
               }
-            }
+            } else {
+              String path = originUrl.getPath();
+              try {
+                File file = new File(path);
+                if (file.exists()) {
+                  FileInputStream fileInputStream = new FileInputStream(file);
+                  WebResourceResponse wr = new WebResourceResponse(url, "utf8", fileInputStream);
+                  return wr;
+                }
+              } catch (Exception e) {
+                return super.shouldInterceptRequest(view, url);
+              }
           }
         } catch (Exception e) {
           return super.shouldInterceptRequest(view, url);

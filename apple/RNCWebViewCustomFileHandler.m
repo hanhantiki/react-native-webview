@@ -152,6 +152,8 @@
         NSString *cacheFilePath = [NSString stringWithFormat:@"%@/tiki-miniapp/apps/%@/%@", documentDir, folderMD5, requestFileName];
         [self loadURL:replacedURL localFile:cacheFilePath urlSchemeTask:urlSchemeTask disableCache:disableCache];
         return;
+      } else {
+        documentPath = stringToLoad;
       }
     } else if ([stringToLoad hasPrefix:@"/resource"]) {
       documentPath = [stringToLoad stringByReplacingOccurrencesOfString:@"/resource" withString:@""];
