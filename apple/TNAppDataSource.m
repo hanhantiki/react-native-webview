@@ -21,18 +21,46 @@
   return self;
 }
 
-- (NSString *)workerFrameworkPath {
+- (NSString * _Nullable)workerFrameWorkPath {
   if (_appMeta[@"workerFrameWorkPath"]) {
     return _appMeta[@"workerFrameWorkPath"];
   }
-  return @"";
+  return nil;
 }
 
-- (NSString *)renderFrameWorkPath {
+- (NSString * _Nullable)renderFrameWorkPath {
   if (_appMeta[@"renderFrameWorkPath"]) {
     return _appMeta[@"renderFrameWorkPath"];
   }
-  return @"";
+  return nil;
+}
+
+- (NSString * _Nullable)stylesFrameWorkPath {
+  if (_appMeta[@"stylesFrameWorkPath"]) {
+    return _appMeta[@"stylesFrameWorkPath"];
+  }
+  return nil;
+}
+
+- (NSString * _Nullable)indexHtmlSnapshotFile {
+  if (_appMeta[@"indexHtmlSnapshotFile"]) {
+    return _appMeta[@"indexHtmlSnapshotFile"];
+  }
+  return nil;
+}
+
+- (int)snapshotExpiredDay {
+  if (_appMeta[@"snapshotExpiredDay"] && [_appMeta[@"snapshotExpiredDay"] intValue]) {
+    return [_appMeta[@"snapshotExpiredDay"] intValue];
+  }
+  return 0;
+}
+
+- (int)cacheExpiredDay {
+  if (_appMeta[@"cacheExpiredDay"] && [_appMeta[@"cacheExpiredDay"] intValue]) {
+    return [_appMeta[@"cacheExpiredDay"] intValue];
+  }
+  return 0;
 }
 
 @end
