@@ -495,6 +495,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
 
   @ReactProp(name = "source")
   public void setSource(WebView view, @Nullable ReadableMap source) {
+    Log.i("RNCWebViewManager", source.toString());
     if (source != null) {
       if (source.hasKey("html")) {
         String html = source.getString("html");
@@ -562,7 +563,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     TNAppDatSource appDataSource = new TNAppDatSource(appMeta);
     RNCWebViewClient client = ((RNCWebView) view).getRNCWebViewClient();
     if (client != null) {
-      client.setAppDatSource(appDataSource);
+      client.setAppMeta(appMeta);
     }
   }
 
@@ -839,14 +840,11 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     protected RNCWebView.ProgressChangedFilter progressChangedFilter = null;
     protected @Nullable
     String ignoreErrFailedForThisURL = null;
+    TNAppDatSource appDatSource = new TNAppDatSource();
 
-
-    public void setAppDatSource(@Nullable TNAppDatSource appDatSource) {
-      this.appDatSource = appDatSource;
+    public void setAppMeta(ReadableMap appMeta) {
+      this.appDatSource.setAppMeta(appMeta);
     }
-
-    protected  @Nullable
-    TNAppDatSource appDatSource = null;
 
     public void setIgnoreErrFailedForThisURL(@Nullable String url) {
       ignoreErrFailedForThisURL = url;
@@ -855,6 +853,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
     public WebResourceResponse shouldInterceptRequest(final WebView view, String url) {
+      Log.i("RNCWebViewManager", url);
       Uri originUrl = Uri.parse(url);
       String scheme = originUrl.getScheme();
       String host = originUrl.getHost();
@@ -957,14 +956,17 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
                   return wr;
                 }
               } catch (Exception e) {
+                Log.e("RNCWebViewManager", e.toString());
                 return super.shouldInterceptRequest(view, url);
               }
             }
           }
         } catch (Exception e) {
+          Log.e("RNCWebViewManager", e.toString());
           return super.shouldInterceptRequest(view, url);
         }
       }
+      Log.i("RNCWebViewManager", "Skip intercept request " + url);
       return super.shouldInterceptRequest(view, url);
     }
 
@@ -1036,6 +1038,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
             inputStream.close();
           }
         } catch (Exception e) {
+          Log.e("RNCWebViewManager", e.toString());
         }
       }
       return null;
