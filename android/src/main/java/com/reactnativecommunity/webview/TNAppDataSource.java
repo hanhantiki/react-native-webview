@@ -2,12 +2,16 @@ package com.reactnativecommunity.webview;
 
 import com.facebook.react.bridge.ReadableMap;
 
-public class TNAppDatSource {
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
+public class TNAppDataSource {
 
   private ReadableMap appMeta;
 
-  TNAppDatSource() {}
-  TNAppDatSource(ReadableMap appMeta) {
+  TNAppDataSource() {}
+  TNAppDataSource(ReadableMap appMeta) {
     this.appMeta = appMeta;
   }
 
@@ -66,5 +70,20 @@ public class TNAppDatSource {
       return this.appMeta.getString("indexHtmlSnapshotFile");
     }
     return null;
+  }
+
+  public HashMap<String, String> cacheFolderMapping() {
+    if (this.appMeta == null || !this.appMeta.hasKey("cacheFolderMapping")) {
+      return null;
+    }
+
+    HashMap<String, String> result = new HashMap<>();
+    ReadableMap value = this.appMeta.getMap("cacheFolderMapping");
+    Iterator<Map.Entry<String, Object>> iterator = value.getEntryIterator();
+    while (iterator.hasNext()) {
+      Map.Entry<String, Object> entry = iterator.next();
+      result.put(entry.getKey(), entry.getValue().toString());
+    }
+    return result;
   }
 }
