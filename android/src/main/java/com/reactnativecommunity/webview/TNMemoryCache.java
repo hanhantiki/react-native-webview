@@ -1,24 +1,42 @@
 package com.reactnativecommunity.webview;
 
+import android.os.Build;
 import android.util.Log;
 import android.util.LruCache;
+import android.webkit.MimeTypeMap;
 import android.webkit.WebResourceResponse;
 
+import androidx.annotation.RequiresApi;
+
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 public class TNMemoryCache {
+  // TODO: how to determine better cache size
   final static int CACHE_SIZE = 10 * 1024 * 1024; // 5MB
   final static int BUFFER_SIZE = 10 * 1024; // 10KB
+  static TNMemoryCache instance = null;
+
+  static TNMemoryCache getInstance() {
+    if (instance == null) {
+      instance = new TNMemoryCache();
+    }
+    return instance;
+  }
+
   final LruCache<String, String> cache;
 
-  public TNMemoryCache() {
+  private TNMemoryCache() {
     cache = new LruCache<String, String>(CACHE_SIZE) {
       protected int sizeOf(String key, String value) {
         return value.length();
@@ -42,12 +60,14 @@ public class TNMemoryCache {
 
     try {
       FileInputStream inputStream = new FileInputStream(file.getPath());
+      ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
       StringBuilder builder = new StringBuilder();
-      byte[] data = new byte[BUFFER_SIZE];
-      while (inputStream.read(data) != -1) {
-        builder.append(Arrays.toString(data));
+      byte[] buffer = new byte[BUFFER_SIZE];
+      int length = 0;
+      while ((length = inputStream.read(buffer)) != -1) {
+        byteStream.write(buffer, 0, length);
       }
-      return builder.toString();
+      return byteStream.toString();
     } catch(Exception e) {
       return null;
     }
@@ -73,18 +93,18 @@ public class TNMemoryCache {
       }
 
       inputStream = connection.getInputStream();
-      StringBuilder builder = new StringBuilder();
+      ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
 
       // read from temp stream and write to file
       outputStream = new FileOutputStream(filePath, false);
-      byte data[] = new byte[BUFFER_SIZE];
+      byte buffer [] = new byte[BUFFER_SIZE];
       int count;
-      while ((count = inputStream.read(data)) != -1) {
-        outputStream.write(data, 0, count);
-        builder.append(Arrays.toString(data));
+      while ((count = inputStream.read(buffer)) != -1) {
+        outputStream.write(buffer, 0, count);
+        byteStream.write(buffer, 0, count);
       }
       outputStream.flush();
-      return builder.toString();
+      return byteStream.toString();
     } catch (Exception e) {
       return null;
     } finally {
@@ -106,8 +126,10 @@ public class TNMemoryCache {
 
   // TODO: how to handle race condition when read from cache parallel
   public InputStream getInputStream(URL url, String cacheFilePath, int expiredDay) {
-    if (cache.get(cacheFilePath) != null) {
-      return new ByteArrayInputStream(cache.get(cacheFilePath).getBytes());
+    boolean isJSFile = cacheFilePath.endsWith(".js");
+
+    if (isJSFile && cache.get(cacheFilePath) != null) {
+      return new ByteArrayInputStream(cache.get(cacheFilePath).getBytes(Charset.forName("UTF-8")));
     }
 
     String content = null;
@@ -123,19 +145,39 @@ public class TNMemoryCache {
       return null;
     }
 
-    synchronized (cache) {
-      cache.put(cacheFilePath, content);
+    if (isJSFile) {
+      synchronized (cache) {
+        cache.put(cacheFilePath, content);
+      }
     }
 
     return new ByteArrayInputStream(content.getBytes());
   }
 
+  protected String getMimeType(String url) {
+    String extension = MimeTypeMap.getFileExtensionFromUrl(url);
+    if (extension != null) {
+      String type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+      if (type != null) {
+        return type;
+      }
+    }
+    return "text/html";
+  }
+
+  @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
   public WebResourceResponse getWebResourceResponse(URL url, String cacheFilePath, int expiredDay) {
     InputStream inputStream = getInputStream(url, cacheFilePath, expiredDay);
     if (inputStream == null) {
       return null;
     }
-    return new WebResourceResponse(url.toString(), "utf8", inputStream);
+
+    Map<String, String> headers = new HashMap<>();
+    headers.put("Access-Control-Allow-Origin", "*");
+    headers.put("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT, OPTIONS");
+    headers.put("Access-Control-Allow-Headers", "agent, user-data, Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
+    headers.put("X-Powered-By", "Tiniapp");
+    return new WebResourceResponse(getMimeType(url.toString()), "UTF-8", 200, "OK", headers, inputStream);
   }
 }
 

@@ -162,7 +162,6 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
   String mUserAgent = null;
   protected @Nullable
   String mUserAgentWithApplicationName = null;
-  TNMemoryCache cache = new TNMemoryCache();
 
   public RNCWebViewManager() {
     mWebViewConfig = new WebViewConfig() {
@@ -562,7 +561,6 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     RNCWebViewClient client = ((RNCWebView) view).getRNCWebViewClient();
     if (client != null) {
       client.setAppMeta(appMeta);
-      client.setCache(cache);
     }
   }
 
@@ -841,11 +839,6 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     String ignoreErrFailedForThisURL = null;
     TNAppDataSource appDataSource = new TNAppDataSource();
     TNCacheUtils cacheUtils = new TNCacheUtils();
-    TNMemoryCache cache = null;
-
-    public void setCache(TNMemoryCache cache) {
-      this.cache = cache;
-    }
 
     public void setAppMeta(ReadableMap appMeta) {
       this.appDataSource.setAppMeta(appMeta);
@@ -907,6 +900,10 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
       return super.shouldInterceptRequest(view, url);
     }
 
+    private TNMemoryCache getCache() {
+      return TNMemoryCache.getInstance();
+    }
+
     private WebResourceResponse interceptWithCacheFolderMapping(WebView view, String url) {
       try {
         HashMap<String, String> cacheFolders = this.appDataSource.cacheFolderMapping();
@@ -916,7 +913,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
           return null;
         }
 
-        return cache.getWebResourceResponse(originUrl, cachePath, appDataSource.cacheExpiredDay());
+        return getCache().getWebResourceResponse(originUrl, cachePath, appDataSource.cacheExpiredDay());
       } catch (Exception e) {
         return null;
       }
@@ -945,7 +942,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
 //        return response;
 //      }
 //      return null;
-      return this.cache.getWebResourceResponse(replacedURL, cacheFilePath.getPath(), expiredDay);
+      return getCache().getWebResourceResponse(replacedURL, cacheFilePath.getPath(), expiredDay);
     }
 
     @Nullable
@@ -967,7 +964,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
       }
       File filePath = new File(cacheDir, "tiki-miniapp/frameworks/" + cacheUtils.getFolderMD5(frameworkURL) + "/" + requestFileName);
       if (frameworkURL != null) {
-        return this.cache.getWebResourceResponse(frameworkURL, filePath.getPath(), expiredDay);
+        return getCache().getWebResourceResponse(frameworkURL, filePath.getPath(), expiredDay);
 //        WebResourceResponse response = cacheUtils.loadURL(frameworkURL, filePath, expiredDay);
 //        if (response != null) {
 //          return response;
