@@ -165,19 +165,12 @@ public class TNMemoryCache {
     return "text/html";
   }
 
-  @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
   public WebResourceResponse getWebResourceResponse(URL url, String cacheFilePath, int expiredDay) {
     InputStream inputStream = getInputStream(url, cacheFilePath, expiredDay);
     if (inputStream == null) {
       return null;
     }
-
-    Map<String, String> headers = new HashMap<>();
-    headers.put("Access-Control-Allow-Origin", "*");
-    headers.put("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT, OPTIONS");
-    headers.put("Access-Control-Allow-Headers", "agent, user-data, Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
-    headers.put("X-Powered-By", "Tiniapp");
-    return new WebResourceResponse(getMimeType(url.toString()), "UTF-8", 200, "OK", headers, inputStream);
+    return new WebResourceResponse("", "UTF-8", inputStream);
   }
 }
 
