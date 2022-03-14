@@ -25,22 +25,31 @@ import android.webkit.WebChromeClient;
 import android.widget.Toast;
 
 import com.facebook.react.bridge.ActivityEventListener;
+import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.module.annotations.ReactModule;
 import com.facebook.react.modules.core.PermissionAwareActivity;
 import com.facebook.react.modules.core.PermissionListener;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static android.app.Activity.RESULT_OK;
+
+import vn.tiki.tiniapp.TNConfig;
+import vn.tiki.tiniapp.TNEngine;
+import vn.tiki.tiniapp.download.DownloadTask;
 
 @ReactModule(name = RNCWebViewModule.MODULE_NAME)
 public class RNCWebViewModule extends ReactContextBaseJavaModule implements ActivityEventListener {
@@ -53,6 +62,7 @@ public class RNCWebViewModule extends ReactContextBaseJavaModule implements Acti
   private File outputImage;
   private File outputVideo;
   private DownloadManager.Request downloadRequest;
+  private TNEngine tiniEngine;
 
   protected static class ShouldOverrideUrlLoadingLock {
     protected enum ShouldOverrideCallbackState {
@@ -118,6 +128,17 @@ public class RNCWebViewModule extends ReactContextBaseJavaModule implements Acti
   public RNCWebViewModule(ReactApplicationContext reactContext) {
     super(reactContext);
     reactContext.addActivityEventListener(this);
+    tiniEngine = TNEngine.createInstance(new TNConfig() {
+      @Override
+      public String getAbsoluteCache() {
+        return reactContext.getCacheDir().getAbsolutePath() + "/" + "tiniapp";
+      }
+
+      @Override
+      public Context getContext() {
+        return reactContext;
+      }
+    });
   }
 
   @Override
@@ -541,4 +562,32 @@ public class RNCWebViewModule extends ReactContextBaseJavaModule implements Acti
     }
     return (PermissionAwareActivity) activity;
   }
+
+  @ReactMethod
+  public void preloadResources(ReadableArray inputUrls) {
+      Log.i("RNCWebViewModule", "inputUrls " + inputUrls.toString());
+      ArrayList<String> urls = new ArrayList<>(inputUrls.size());
+      for (int i = 0; i < inputUrls.size(); i++) {
+        Log.i("RNCWebViewModule", "inputUrl [" + i + "] = " + inputUrls.getString(i));
+        urls.add(inputUrls.getString(i));
+      }
+      tiniEngine.preloadResources(urls);
+  }
+
+  @ReactMethod
+  public void downloadResource(String url, Callback callback) {
+    DownloadTask task = tiniEngine.downloadResource(url);
+    try {
+      ByteArrayOutputStream result = new ByteArrayOutputStream();
+      byte[] buffer = new byte[2048];
+      for (int length; (length = task.inputStream.read(buffer)) != -1; ) {
+        result.write(buffer, 0, length);
+      }
+      String content = result.toString("UTF-8");
+      callback.invoke(null, content);
+    } catch(Exception e) {
+      callback.invoke(e, null);
+    }
+  }
+
 }

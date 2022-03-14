@@ -22,6 +22,7 @@ import NativeWebpage from './examples/NativeWebpage';
 import ApplePay from './examples/ApplePay';
 import NativeComponent from './examples/NativeComponent';
 import Framework from './examples/Framework';
+import TiniEngineWebView from './examples/TiniEngineWebView';
 
 const TESTS = {
   Messaging: {
@@ -119,7 +120,15 @@ const TESTS = {
     render() {
       return <Framework />;
     },
-  }
+  },
+  TiniEngine: {
+    title: 'TiniEngine',
+    testId: 'TiniEngine',
+    description: 'Test use TiniEngine with WebView',
+    render() {
+      return <TiniEngineWebView />;
+    },
+  },
 };
 
 type Props = {};
@@ -208,11 +217,11 @@ export default class App extends Component<Props, State> {
             onPress={() => this._changeTest('NativeWebpage')}
           />
           {Platform.OS === 'ios' && (
-              <Button
-                  testID="testType_applePay"
-                  title="ApplePay"
-                  onPress={() => this._changeTest('ApplePay')}
-              />
+            <Button
+              testID="testType_applePay"
+              title="ApplePay"
+              onPress={() => this._changeTest('ApplePay')}
+            />
           )}
           <Button
             testID="testType_nativeComponent"
@@ -223,6 +232,11 @@ export default class App extends Component<Props, State> {
             testID="testType_framework"
             title="Framework"
             onPress={() => this._changeTest('Framework')}
+          />
+          <Button
+            testID="testType_tiniengine"
+            title="Tini Engine"
+            onPress={() => this._changeTest('TiniEngine')}
           />
         </View>
 
