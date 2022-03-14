@@ -60,7 +60,7 @@ public class FileUtils {
     }
 
     static String getResourceCachePath() {
-        String dirPath = TNEngine.getInstance().getAbsolutePath();
+        String dirPath = TNEngine.getInstance().getConfig().getAbsoluteCache();
         if (!dirPath.endsWith(File.separator)) {
             dirPath += File.separator;
         }
@@ -218,13 +218,17 @@ public class FileUtils {
     }
 
     public static boolean saveResourceFiles(String resourceName, byte[] resourceBytes, Map<String, List<String>> headers) {
-        if (resourceBytes != null && !writeFile(resourceBytes, getResourcePath(resourceName))) {
+        String resourcePath = getResourcePath(resourceName);
+        if (resourceBytes != null && !writeFile(resourceBytes, resourcePath)) {
             Log.e(TAG, "saveResourceFiles error: write resource data fail.");
             return false;
         }
+        Log.i(TAG, "save resource path " + resourcePath);
 
+        String resourceHeaderPath = getResourceHeaderPath(resourceName);
+        Log.i(TAG, "save resource path header " + resourceHeaderPath);
         if (headers != null && headers.size() > 0
-                &&!writeFile(convertHeadersToString(headers), getResourceHeaderPath(resourceName))) {
+                &&!writeFile(convertHeadersToString(headers), resourceHeaderPath)) {
             Log.e(TAG, "saveResourceFiles error: write header file fail.");
             return false;
         }
@@ -259,9 +263,15 @@ public class FileUtils {
 
     private static boolean writeFile(byte[] content, String filePath) {
         File file = new File(filePath);
+        File parentDir = file.getParentFile();
+        if (!parentDir.exists()) {
+            parentDir.mkdirs();
+        }
+
         FileOutputStream fos = null;
         try {
             if (!file.exists() && !file.createNewFile()) {
+                Log.e(TAG, "could not create file" + filePath);
                 return false;
             }
             fos = new FileOutputStream(file);

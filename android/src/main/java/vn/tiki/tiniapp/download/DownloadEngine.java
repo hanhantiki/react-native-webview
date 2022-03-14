@@ -139,7 +139,7 @@ public class DownloadEngine implements Handler.Callback {
 
             @Override
             public void onSuccess(byte[] content, Map<String, List<String>> rspHeaders) {
-                // TODO: add to cache
+                cache.saveResourceCache(task.url, content, rspHeaders);
             }
 
             @Override
@@ -149,6 +149,7 @@ public class DownloadEngine implements Handler.Callback {
 
             @Override
             public void onFinish() {
+                Log.i(TAG, "download resource finished, url = " + task.url);
                 task.state.set(DownloadTask.STATE_DOWNLOADED);
                 handler.sendEmptyMessage(MSG_DEQUEUE);
             }

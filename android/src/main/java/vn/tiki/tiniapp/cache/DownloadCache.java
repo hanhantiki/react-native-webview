@@ -7,7 +7,6 @@ import java.io.File;
 import java.util.List;
 import java.util.Map;
 
-// TODO: implement this class
 public class DownloadCache {
     private static final String TAG = "Tini.DownloadCache";
 
@@ -30,21 +29,21 @@ public class DownloadCache {
         // verify local data
         if (TextUtils.isEmpty(resourceData.resourceSha1)) {
             verifyError = true;
-            Log.i(TAG, "get resource data(" + url + "): resource data is empty.");
+            Log.i(TAG, "get resource data (" + url + "): resource data is empty.");
         } else {
             String resourcePath = FileUtils.getResourcePath(resourceId);
             File resourceFile = new File(resourcePath);
             resourceBytes = FileUtils.readFileToBytes(resourceFile);
             verifyError = resourceBytes == null || resourceBytes.length <= 0;
             if (verifyError) {
-                Log.e(TAG, "get resource data(" + url + ") error:cache data is null.");
+                Log.e(TAG, "get resource data (" + url + ") error:cache data is null.");
             } else {
                 if (!FileUtils.verifyData(resourceBytes, resourceData.resourceSha1)) {
                     verifyError = true;
                     resourceBytes = null;
-                    Log.e(TAG, "get resource data(" + url + ") error:verify html cache with sha1 fail.");
+                    Log.e(TAG, "get resource data (" + url + ") error: verify cache with sha1 fail.");
                 } else {
-                    Log.e(TAG, "get resource data(" + url + ") verify html cache with sha1 success.");
+                    Log.i(TAG, "get resource data (" + url + ") verify cache with sha1 success.");
                 }
             }
         }
@@ -53,7 +52,6 @@ public class DownloadCache {
             resourceData.delete(url);
         }
         return resourceBytes;
-
     }
 
     public Map<String, List<String>> getResourceCacheHeader(String url) {

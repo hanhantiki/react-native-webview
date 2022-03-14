@@ -36,8 +36,8 @@ public class DownloadConnection {
         try {
             URL currentUrl = new URL(url);
             newConn = currentUrl.openConnection();
-            connImpl.setConnectTimeout(5000);
-            connImpl.setReadTimeout(15000);
+            newConn.setConnectTimeout(5000);
+            newConn.setReadTimeout(15000);
         } catch(Throwable e) {
             if (newConn != null) {
                 newConn = null;

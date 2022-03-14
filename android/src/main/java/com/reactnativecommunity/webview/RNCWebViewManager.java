@@ -103,6 +103,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
+import vn.tiki.tiniapp.TNEngine;
+
 /**
  * Manages instances of {@link WebView}
  * <p>
@@ -562,6 +564,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     if (client != null) {
       client.setAppMeta(appMeta);
     }
+    TNEngine.getInstance().setUpWebView(view, appMeta);
   }
 
   @ReactProp(name = "onContentSizeChange")
@@ -851,24 +854,29 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
     public WebResourceResponse shouldInterceptRequest(final WebView view, String url) {
-      Log.i("RNCWebViewManager", url);
+      WebResourceResponse result = null;
+      result = TNEngine.getInstance().shouldInterceptRequest(view, url);
+      if (result != null) {
+        return result;
+      }
 
+      Log.i("RNCWebViewManager", url);
       Uri originUrl = Uri.parse(url);
       String scheme = originUrl.getScheme();
       String host = originUrl.getHost();
+      String path = originUrl.getPath();
 
       if (!scheme.equals("miniapp-resource")) {
         Log.i("RNCWebViewManager", "Skip intercept request " + url);
         return super.shouldInterceptRequest(view, url);
       }
 
-      WebResourceResponse result = this.interceptWithCacheFolderMapping(view, url);
+      result = this.interceptWithCacheFolderMapping(view, url);
       if (result != null) {
         return result;
       }
 
       try {
-        String path = originUrl.getPath();
         if (host.equals("tinibridge")) {
           return interceptTiniBridgeRequest(view, originUrl);
         } else if (path != null) {
