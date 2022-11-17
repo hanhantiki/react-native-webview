@@ -13,6 +13,7 @@
 #import "TNAppDataSource.h"
 #import "NSString+MD5.h"
 #import <objc/message.h>
+#import <RNTiniWorker/RNCZipAppCache.h>
 
 @interface RNCWebViewCustomFileHandler ()
 
@@ -219,6 +220,7 @@
     // - not expired
     // - no #NOCACHE
     // - cache file exists
+		/*
     if (filePath && [[NSFileManager defaultManager] fileExistsAtPath:filePath]
         && ![self deleteFileIfExpired:filePath expiredDay:expiredDay]) {
       NSData *data = [NSData dataWithContentsOfFile:filePath options:NSDataReadingMappedIfSafe error:nil];
@@ -229,6 +231,50 @@
     } else {
       [self requestRemoteURL:url urlSchemeTask:urlSchemeTask filePath:filePath];
     }
+		 */
+		if ([RNCZipAppCache enableZipCache:_appDataSource.appId sourceUri:_appDataSource.sourceUri]) {
+			if (filePath && [[NSFileManager defaultManager] fileExistsAtPath:filePath]
+					&& ![self isExpired:filePath expiredDay:expiredDay]) {
+				NSData *data = [NSData dataWithContentsOfFile:filePath options:NSDataReadingMappedIfSafe error:nil];
+				if (!data) {
+					return;
+				}
+				[self resendRequestWithUrlSchemeTask:urlSchemeTask mimeType:[self getMimeTypeWithFilePath:filePath] requestData:data];
+			} else {
+				NSString *fileUrl = [RNCZipAppCache copyFileLocalToCachesDirectoryFromUrl:url appId:_appDataSource.appId cdnBaseUrl:_appDataSource.cdnBaseUrl frameworkUrl:_appDataSource.frameworkFilesLocation];
+				if (fileUrl != NULL) {
+					if ([fileUrl length] > 0) {
+						NSData *data = [NSData dataWithContentsOfFile:fileUrl options:NSDataReadingMappedIfSafe error:nil];
+						if (!data) {
+							return;
+						}
+						[self resendRequestWithUrlSchemeTask:urlSchemeTask mimeType:[self getMimeTypeWithFilePath:filePath] requestData:data];
+					} else {
+						NSData *data = [NSData dataWithContentsOfFile:filePath options:NSDataReadingMappedIfSafe error:nil];
+						if (!data) {
+							return;
+						}
+						[self resendRequestWithUrlSchemeTask:urlSchemeTask mimeType:[self getMimeTypeWithFilePath:filePath] requestData:data];
+					}
+				}else {
+					if ([self isExpired:filePath expiredDay:expiredDay]) {
+						[self deleteFileIfExpired:filePath];
+					}
+					[self requestRemoteURL:url urlSchemeTask:urlSchemeTask filePath:filePath];
+				}
+			}
+		} else {
+			if (filePath && [[NSFileManager defaultManager] fileExistsAtPath:filePath]
+					&& ![self deleteFileIfExpired:filePath expiredDay:expiredDay]) {
+				NSData *data = [NSData dataWithContentsOfFile:filePath options:NSDataReadingMappedIfSafe error:nil];
+				if (!data) {
+					return;
+				}
+				[self resendRequestWithUrlSchemeTask:urlSchemeTask mimeType:[self getMimeTypeWithFilePath:filePath] requestData:data];
+			} else {
+				[self requestRemoteURL:url urlSchemeTask:urlSchemeTask filePath:filePath];
+			}
+		}
 }
 
 - (void)requestRemoteURL:(NSURL *)url urlSchemeTask:(id <WKURLSchemeTask>)urlSchemeTask filePath:(NSString *)filePath API_AVAILABLE(ios(11.0)) {

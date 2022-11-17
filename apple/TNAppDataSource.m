@@ -63,4 +63,32 @@
   return 0;
 }
 
+- (NSString * _Nullable)appId {
+	if (_appMeta[@"appId"]) {
+		return _appMeta[@"appId"];
+	}
+	return nil;
+}
+
+- (NSString * _Nullable)cdnBaseUrl {
+	if (_appMeta[@"cdnBaseUrl"]) {
+		return _appMeta[@"cdnBaseUrl"];
+	}
+	return nil;
+}
+
+- (NSString * _Nullable)frameworkFilesLocation {
+	if (_appMeta[@"frameworkFilesLocation"]) {
+		return _appMeta[@"frameworkFilesLocation"];
+	}
+	return nil;
+}
+
+- (NSString * _Nullable)sourceUri {
+	if (_source[@"uri"]) {
+		return _source[@"uri"];
+	}
+	return nil;
+}
+
 @end

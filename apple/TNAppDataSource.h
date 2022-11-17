@@ -11,12 +11,16 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface TNAppDataSource : NSObject
 
-- (instancetype)initWithAppMeta:(NSDictionary *)appMeta;
+- (instancetype)initWithAppMeta:(NSDictionary *)appMeta source:(NSDictionary*)source;
 
 @property (readonly) NSString * _Nullable renderFrameWorkPath;
 @property (readonly) NSString * _Nullable workerFrameWorkPath;
 @property (readonly) NSString * _Nullable stylesFrameWorkPath;
 @property (readonly) NSString * _Nullable indexHtmlSnapshotFile;
+@property (readonly) NSString * _Nullable frameworkFilesLocation;
+@property (readonly) NSString * _Nullable appId;
+@property (readonly) NSString * _Nullable cdnBaseUrl;
+@property (readonly) NSString * _Nullable sourceUri;
 @property (readonly) int snapshotExpiredDay;
 @property (readonly) int cacheExpiredDay;
 
