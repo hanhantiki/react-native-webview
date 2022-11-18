@@ -334,6 +334,27 @@
   return false;
 }
 
+- (BOOL)isExpired:(NSString *)filePath expiredDay:(int)expiredDay {
+	NSFileManager *fileManager = [NSFileManager defaultManager];
+	if ([fileManager fileExistsAtPath:filePath]) {
+		NSDictionary *fileStats = [fileManager attributesOfItemAtPath:filePath error:nil];
+		NSDate *latestUpdated = [fileStats objectForKey:NSFileModificationDate];
+		NSTimeInterval latestUpdatedTimestamp = [latestUpdated timeIntervalSince1970];
+		NSTimeInterval nowTimpestamp = [[[NSDate alloc] init] timeIntervalSince1970];
+		if (nowTimpestamp - latestUpdatedTimestamp > expiredDay * 86400) {
+			return true;
+		}
+	}
+	return false;
+}
+
+- (void)deleteFileIfExpired:(NSString *)filePath {
+	NSFileManager *fileManager = [NSFileManager defaultManager];
+	if ([fileManager fileExistsAtPath:filePath]) {
+		[fileManager removeItemAtPath:filePath error:nil];
+	}
+}
+
 - (void)resendRequestWithUrlSchemeTask:(id <WKURLSchemeTask>)urlSchemeTask
                               mimeType:(NSString *)mimeType
                            requestData:(NSData *)requestData  API_AVAILABLE(ios(11.0)) {
