@@ -9,14 +9,16 @@
 
 @implementation TNAppDataSource {
   NSDictionary *_appMeta;
+  NSDictionary *_source;
   NSString *_frameworkReplacementPath;
 }
 
-- (instancetype)initWithAppMeta:(NSDictionary *)appMeta
+- (instancetype)initWithAppMeta:(NSDictionary *)appMeta source:(NSDictionary*)source;
 {
   self = [super init];
   if (self) {
     _appMeta = appMeta;
+	_source = source;
   }
   return self;
 }

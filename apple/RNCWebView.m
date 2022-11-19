@@ -241,7 +241,7 @@ static NSDictionary* customCertificatesForHost;
   if (!_appMeta) {
     _appMeta = [[NSDictionary alloc] init];
   }
-  TNAppDataSource *_dataSource = [[TNAppDataSource alloc] initWithAppMeta:_appMeta];
+  TNAppDataSource *_dataSource = [[TNAppDataSource alloc] initWithAppMeta:_appMeta source:_source];
   RNCWebViewCustomFileHandler *schemeHandler = [[RNCWebViewCustomFileHandler alloc] initWithDataSource:_dataSource];
   
   if (@available(iOS 11.0, *)) {

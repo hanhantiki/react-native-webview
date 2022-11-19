@@ -289,6 +289,8 @@
     configuration.HTTPAdditionalHeaders = @{@"Accept": @"text/html,application/json,text/json,text/javascript,text/plain,application/javascript,text/css,image/svg+xml,application/font-woff2,font/woff2,application/octet-stream",
                                             @"Accept-Language": @"en"};
     NSURLSession *session = [NSURLSession sessionWithConfiguration:configuration];
+	__weak RNCWebViewCustomFileHandler *wSelf = self;
+	__weak NSURL *wUrl = url;
     NSURLSessionDataTask *dataTask = [session dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         // response the request
         [urlSchemeTask didReceiveResponse:response];
@@ -310,6 +312,7 @@
                 NSLog(@"createDirectoryAtPath failed %@", error);
             }
             [data writeToFile:filePath atomically:YES];
+			[RNCZipAppCache updateStatusFileSaved:wUrl appId:wSelf.appDataSource.appId cdnBaseUrl:wSelf.appDataSource.cdnBaseUrl framworkUrl:wSelf.appDataSource.frameworkFilesLocation];
           }
         }
     }];
