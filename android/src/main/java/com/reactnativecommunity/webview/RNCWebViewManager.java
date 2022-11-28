@@ -83,6 +83,8 @@ import com.reactnativecommunity.webview.events.TopLoadingStartEvent;
 import com.reactnativecommunity.webview.events.TopMessageEvent;
 import com.reactnativecommunity.webview.events.TopShouldStartLoadWithRequestEvent;
 import com.reactnativecommunity.webview.events.TopRenderProcessGoneEvent;
+import com.tiniworker.cache.RNTiniCacheManager;
+import com.tiniworker.cache.RNTiniCacheVersionManager;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -922,7 +924,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
               }
               File filePath = new File(cacheDir, "tiki-miniapp/frameworks/" + this.getFolderMD5(frameworkURL) + "/" + requestFileName);
               if (frameworkURL != null) {
-                WebResourceResponse response = this.loadURL(frameworkURL, filePath, expiredDay);
+                WebResourceResponse response = this.loadURLV2(frameworkURL, filePath, expiredDay, cw);
                 if (response != null) {
                   return response;
                 }
@@ -943,7 +945,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
                   expiredDay = this.appDatSource.snapshotExpiredDay();
                 }
               }
-              WebResourceResponse response = this.loadURL(replacedURL, cacheFilePath, expiredDay);
+              WebResourceResponse response = this.loadURLV2(replacedURL, cacheFilePath, expiredDay, cw);
               if (response != null) {
                 return response;
               }
@@ -981,7 +983,45 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private WebResourceResponse loadURL(URL url, File filePath, int expiredDay)  {
+    private WebResourceResponse loadURLV2(URL url, File filePath, int expiredDay, Context context)  {
+      if (RNTiniCacheManager.getInstance().enableLoadAppFromZip(this.appDatSource.getLaunchParams())) {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Access-Control-Allow-Origin", "*");
+        headers.put("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT, OPTIONS");
+        headers.put("Access-Control-Allow-Headers", "agent, user-data, Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
+        headers.put("X-Powered-By", "Tiniapp");
+        if (filePath.exists() && !isFileIfExpired(filePath, expiredDay)) {
+          try {
+            FileInputStream fileInputStream = new FileInputStream(filePath);
+            String mimeType = this.getMimeType(filePath.getAbsolutePath());
+            long endTime = System.currentTimeMillis();
+            return new WebResourceResponse(mimeType, "UTF-8", 200, "OK", headers, fileInputStream);
+          } catch (Exception e) {
+            Log.e("RNCWebViewManager", e.toString());
+          }
+        } else {
+          File cacheFile = RNTiniCacheManager.getInstance().getFilePathFromCache(url, this.appDatSource.getAppMeta(), context);
+          if (cacheFile != null) {
+            try {
+              FileInputStream fileInputStream = new FileInputStream(cacheFile);
+              String mimeType = this.getMimeType(cacheFile.getAbsolutePath());
+              long endTime = System.currentTimeMillis();
+              return new WebResourceResponse(mimeType, "UTF-8", 200, "OK", headers, fileInputStream);
+            } catch (Exception e) {
+              Log.e("RNCWebViewManager", e.toString());
+            }
+          } else {
+            return loadURL(url, filePath, expiredDay, context);
+          }
+        }
+        return null;
+      } else {
+        return loadURL(url, filePath, expiredDay, context);
+      }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private WebResourceResponse loadURL(URL url, File filePath, int expiredDay, Context context) {
       HttpURLConnection connection = null;
       InputStream inputStream = null;
       try {
@@ -1022,6 +1062,8 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
           }
         }
 
+        RNTiniCacheVersionManager.getInstance().updateAppVersion(this.appDatSource.getAppMeta(), context);
+
         if (filePath.exists()) {
           FileInputStream fileInputStream = new FileInputStream(filePath);
           String mimeType = this.getMimeType(filePath.getAbsolutePath());
@@ -1050,6 +1092,17 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
         long now = System.currentTimeMillis() / 1000;
         if (now - lastModified > expiredDay * 864000) {
           file.delete();
+          return true;
+        }
+      }
+      return false;
+    }
+
+    private boolean isFileIfExpired(File file, int expiredDay) {
+      if (file.exists()) {
+        long lastModified = file.lastModified() / 1000;
+        long now = System.currentTimeMillis() / 1000;
+        if (now - lastModified > expiredDay * 864000) {
           return true;
         }
       }
